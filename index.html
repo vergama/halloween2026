@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hollow Hill: a Halloween calendar</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%83%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#120a22; --plum:#2b1840; --bone:#ece2cc; --candle:#f6c768; --pumpkin:#e8731c; --moss:#86a37e; --dim:#a898b8;
+  --serif:'IM Fell English', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:radial-gradient(ellipse 120% 70% at 50% -10%, #2c1945 0%, #160c29 45%, #0b0716 100%) fixed #0b0716;
+  color:var(--bone); font-family:var(--serif); font-size:18px; line-height:1.5;
+  padding:max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+header{max-width:1400px;margin:0 auto 18px;text-align:center}
+h1{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;font-weight:400;font-size:clamp(2.6rem, 7vw, 5.2rem);line-height:1;margin:6px 0 8px;letter-spacing:.01em;
+   color:var(--bone);text-shadow:0 0 28px rgba(246,199,104,.18), 0 2px 0 rgba(0,0,0,.6)}
+h1.holding{transition:color 2s linear, text-shadow 2s linear;color:#ffd9a0;text-shadow:0 0 44px rgba(255,140,50,.95), 0 2px 0 rgba(0,0,0,.6)}
+.status a{color:var(--bone);text-decoration-thickness:1px;text-underline-offset:3px}
+.sub{font-style:italic;color:var(--dim);margin:0 auto;max-width:36em;font-size:1.05rem}
+.status{margin:10px auto 0;color:var(--candle);font-size:1.08rem;max-width:40em;min-height:1.5em}
+.stage{max-width:1400px;margin:0 auto}
+.scroller{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border-radius:16px;scrollbar-width:thin}
+.scene{position:relative;width:100%;min-width:760px;aspect-ratio:16/10;container-type:inline-size;border-radius:16px;overflow:hidden;
+  background:#05030d;box-shadow:0 0 0 1px #2c1d3d, 0 40px 90px -40px #000;opacity:0;transition:opacity 1.2s ease}
+.loaded .scene{opacity:1}
+.scene>svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.scene>svg.front{pointer-events:none;z-index:5}
+.hint{text-align:center;color:var(--dim);font-style:italic;margin:14px auto 0;font-size:1rem}
+.swipe{display:none}
+@media (max-width:800px){ .swipe{display:inline} }
+
+/* ---------- doors ---------- */
+.door{position:absolute;padding:0;margin:0;border:0;background:none;cursor:pointer;perspective:14cqw;font:inherit;color:inherit;
+  -webkit-tap-highlight-color:transparent;z-index:2}
+.door:focus-visible{outline:2px solid var(--candle);outline-offset:.5cqw;border-radius:.5cqw}
+.door.locked{cursor:default}
+.inside{position:absolute;inset:0;overflow:hidden;background:#05030a;opacity:0;transition:opacity .7s .35s, filter .3s}
+.inside svg{width:100%;height:100%;display:block}
+.inside::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none}
+.open .inside{opacity:1}
+.open:hover .inside{filter:brightness(1.18) saturate(1.1)}
+.num{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;line-height:1;transition:opacity .35s;z-index:3}
+.open .num{opacity:0}
+.instant, .instant *{transition:none !important}
+
+/* windows and the front door: two shutters */
+.shape-arch .inside{border-radius:50% 50% 3px 3px / 32% 32% 3px 3px}
+.shape-rect .inside{border-radius:3px}
+.shape-round .inside{border-radius:50%}
+.leaf{position:absolute;top:0;bottom:0;width:50%;transition:transform 1.2s cubic-bezier(.3,1.3,.45,1);
+  background:repeating-linear-gradient(90deg,#4f3828 0 30%,#2b1c13 30% 33.4%);
+  box-shadow:inset 0 0 0 1px #1a110b, inset 0 0 .7cqw rgba(0,0,0,.55)}
+.leaf.l{left:0;transform-origin:0 50%}
+.leaf.r{right:0;transform-origin:100% 50%}
+.shape-arch .leaf.l{border-top-left-radius:100% 32%}
+.shape-arch .leaf.r{border-top-right-radius:100% 32%}
+.shape-round .leaf.l{border-radius:100% 0 0 100% / 50% 0 0 50%}
+.shape-round .leaf.r{border-radius:0 100% 100% 0 / 0 50% 50% 0}
+.shape-rect .leaf{border-radius:2px}
+.kind-win .num{font-size:1.5cqw;color:#f0e2c2;text-shadow:0 .1cqw .25cqw #000}
+.kind-win.open .leaf.l{transform:rotateY(-114deg)}
+.kind-win.open .leaf.r{transform:rotateY(114deg)}
+.kind-win.open .inside::after{box-shadow:inset 0 0 0 .18cqw #2a1b12}
+.kind-win.open .inside{box-shadow:0 0 1.4cqw .3cqw rgba(255,190,100,.55)}
+.kind-door .leaf{background:linear-gradient(90deg,rgba(0,0,0,.25),transparent 30%), #521a24;
+  box-shadow:inset 0 0 0 .22cqw #2c0c12, inset 0 0 0 .5cqw #521a24, inset 0 0 0 .62cqw #3a1018, inset 0 0 1.4cqw rgba(0,0,0,.55)}
+.kind-door .leaf.l::after{content:'';position:absolute;right:10%;top:64%;width:.9cqw;height:.9cqw;border-radius:50%;border:.18cqw solid #c9a24a}
+.kind-door .num{font-size:2.5cqw;color:#f1d39a;padding-bottom:18%;text-shadow:0 .1cqw .3cqw #000}
+.kind-door.open .leaf.l{transform:rotateY(84deg)}
+.kind-door.open .leaf.r{transform:rotateY(-84deg)}
+.kind-door.open .inside{box-shadow:0 0 2.6cqw .6cqw rgba(255,190,100,.6)}
+
+/* graves: the slab sinks into the earth */
+.kind-tomb{overflow:hidden}
+.kind-tomb .inside{opacity:1}
+.slab{position:absolute;inset:0;transition:transform 1.4s cubic-bezier(.55,0,.8,.35);
+  background:
+    radial-gradient(circle at 22% 86%, rgba(96,128,72,.6) 0 7%, transparent 8%),
+    radial-gradient(circle at 74% 92%, rgba(96,128,72,.5) 0 5%, transparent 6%),
+    radial-gradient(circle at 60% 18%, rgba(255,255,255,.06) 0 14%, transparent 15%),
+    linear-gradient(165deg,#9b97a8,#6b6779 55%,#4a4657);
+  box-shadow:inset .35cqw .35cqw .45cqw rgba(255,255,255,.16), inset -.45cqw -.45cqw .7cqw rgba(0,0,0,.45)}
+.kind-tomb.open .slab{transform:translateY(103%)}
+.kind-tomb.opening{animation:tremble .55s ease-in-out}
+.kind-tomb.opening .slab{transition-delay:.45s}
+.kind-tomb .num{font-size:2.3cqw;color:#2e2b37;text-shadow:0 .1cqw 0 rgba(255,255,255,.28)}
+.kind-tomb.open .inside::after{box-shadow:inset 0 0 1.6cqw .3cqw rgba(150,255,175,.45), inset 0 0 0 .3cqw #3d3a48}
+.kind-tomb.shape-round, .kind-tomb.shape-round .inside, .kind-tomb.shape-round .slab{border-radius:50% 50% 4px 4px / 40% 40% 4px 4px}
+.kind-tomb.shape-square, .kind-tomb.shape-square .inside, .kind-tomb.shape-square .slab{border-radius:18% 18% 4px 4px / 13% 13% 4px 4px}
+.kind-tomb.shape-gothic{clip-path:polygon(0 24%,50% 0,100% 24%,100% 100%,0 100%);border-radius:0}
+.kind-tomb.shape-gothic .num{padding-top:16%}
+@keyframes tremble{0%,100%{transform:translate(0,0)}20%{transform:translate(-.25cqw,0) rotate(-1deg)}40%{transform:translate(.25cqw,0) rotate(1deg)}60%{transform:translate(-.18cqw,0)}80%{transform:translate(.12cqw,0)}}
+
+/* pumpkins: roll away */
+.pcover{position:absolute;inset:0;transform-origin:50% 88%;transition:transform 1.3s cubic-bezier(.45,0,.55,1), opacity .8s .55s;z-index:2}
+.pcover svg{width:100%;height:100%;display:block;filter:drop-shadow(0 .3cqw .3cqw rgba(0,0,0,.5))}
+.kind-pumpkin .inside{inset:10% 12% 6%;border-radius:50%}
+.kind-pumpkin .num{font-size:2cqw;color:#5a2206;padding-top:14%;text-shadow:0 .08cqw 0 rgba(255,190,120,.45)}
+.kind-pumpkin.open .pcover{transform:translateX(90%) rotate(100deg);opacity:0}
+.kind-pumpkin.roll-left.open .pcover{transform:translateX(-90%) rotate(-100deg)}
+.kind-pumpkin.open .inside::after{box-shadow:inset 0 0 0 .3cqw #e97a26, inset 0 0 1.4cqw rgba(255,150,40,.7)}
+.kind-pumpkin.open .inside{box-shadow:0 0 1.6cqw .2cqw rgba(255,140,40,.5)}
+
+/* a burst of light as something opens */
+.door::before{content:'';position:absolute;left:50%;top:50%;width:300%;aspect-ratio:1;border-radius:50%;pointer-events:none;opacity:0;z-index:4;
+  transform:translate(-50%,-50%) scale(.2);background:radial-gradient(circle, rgba(255,214,140,.8), rgba(255,214,140,0) 60%)}
+.kind-pumpkin::before{background:radial-gradient(circle, rgba(255,150,50,.8), rgba(255,150,50,0) 60%)}
+.door.burst::before{animation:burst 1.5s ease-out .35s}
+.kind-tomb.burst::before{display:none}
+@keyframes burst{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}30%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+.door.nope{animation:nope .4s}
+@keyframes nope{25%{transform:translateX(-.35cqw)}50%{transform:translateX(.35cqw)}75%{transform:translateX(-.2cqw)}}
+
+/* ---------- ambient scene motion ---------- */
+.tw{animation:tw 3.5s ease-in-out infinite alternate}
+@keyframes tw{to{opacity:.15}}
+.batfly{animation:batfly linear infinite}
+@keyframes batfly{from{transform:translateX(-140px)}to{transform:translateX(1740px)}}
+.bob{animation:bob 2.6s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(26px)}}
+.flap{animation:flap .28s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+@keyframes flap{to{transform:scaleY(.3)}}
+.cloud{animation:cloud linear infinite alternate}
+@keyframes cloud{from{transform:translateX(-260px)}to{transform:translateX(260px)}}
+.ghostf{animation:ghostf 5s ease-in-out infinite alternate}
+@keyframes ghostf{from{transform:translateY(0);opacity:.35}to{transform:translateY(-22px);opacity:.8}}
+.fogd{animation:fogd 46s ease-in-out infinite alternate}
+@keyframes fogd{from{transform:translateX(-90px)}to{transform:translateX(90px)}}
+.flk{animation:flk 1.8s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes flk{0%{opacity:1;transform:scale(1,1)}40%{opacity:.85;transform:scale(.96,1.04)}100%{opacity:.95;transform:scale(1.02,.97)}}
+.blk{animation:blk 6s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes blk{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+
+/* ---------- close-up view ---------- */
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px}
+.modal[hidden]{display:none}
+.backdrop{position:absolute;inset:0;background:rgba(6,3,12,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity .3s}
+.sheet{position:relative;margin:0;width:min(940px,100%);max-height:calc(100vh - 40px);overflow:auto;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);
+  background:linear-gradient(160deg,#25163a,#170e27);border:1px solid #3d2a55;border-radius:18px;box-shadow:0 40px 100px -20px #000;
+  opacity:0;transform:translateY(16px) scale(.97);transition:opacity .35s, transform .45s cubic-bezier(.2,1.2,.4,1)}
+.modal.show .backdrop{opacity:1}
+.modal.show .sheet{opacity:1;transform:none}
+.art{aspect-ratio:1;background:#000;border-radius:17px 0 0 17px;overflow:hidden}
+.art svg{width:100%;height:100%;display:block}
+.cap{padding:34px 32px 24px;display:flex;flex-direction:column}
+.m-date{margin:0 0 6px;color:var(--candle);font-style:italic}
+.cap h2{margin:0 0 14px;font-weight:400;font-size:clamp(1.8rem,3.4vw,2.6rem);line-height:1.05}
+.m-text{margin:0;color:#d9cfe2;font-size:1.1rem;line-height:1.6;max-width:30em}
+.m-nav{margin-top:auto;padding-top:26px;display:flex;gap:10px;flex-wrap:wrap}
+.m-nav button{font:inherit;font-size:1rem;color:var(--bone);background:#2f1f46;border:1px solid #4a3566;border-radius:999px;padding:8px 16px;cursor:pointer}
+.m-nav button:hover:not(:disabled){background:#3d2959}
+.m-nav button:disabled{opacity:.35;cursor:default}
+.m-nav button:focus-visible{outline:2px solid var(--candle);outline-offset:2px}
+.m-nav .close{margin-left:auto}
+@media (max-width:720px){
+  .sheet{grid-template-columns:1fr}
+  .art{border-radius:17px 17px 0 0}
+  .cap{padding:22px 22px 20px}
+}
+.toast{position:fixed;left:50%;bottom:max(24px, env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;z-index:60;pointer-events:none;
+  background:#2a1a40;border:1px solid #4a3566;color:var(--bone);padding:10px 18px;border-radius:999px;font-style:italic;transition:opacity .3s, transform .3s;
+  max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion: reduce){
+  .tw,.batfly,.bob,.flap,.cloud,.ghostf,.fogd,.flk,.blk,.kind-tomb.opening,.door.nope{animation:none !important}
+  .leaf,.slab,.pcover{transition-duration:.3s !important;transition-delay:0s !important}
+  .door.burst::before{animation:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Hollow Hill</h1>
+  <p class="sub" id="sub"></p>
+  <p class="status" id="status" aria-live="polite"></p>
+</header>
+<main class="stage">
+  <div class="scroller"><div class="scene" id="scene"></div></div>
+  <p class="hint">Click an open window, grave or pumpkin to see it up close.<span class="swipe"> Swipe sideways to see the whole hill.</span></p>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="backdrop" data-close></div>
+  <figure class="sheet" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="art" id="m-art"></div>
+    <figcaption class="cap">
+      <p class="m-date" id="m-date"></p>
+      <h2 id="m-title"></h2>
+      <p class="m-text" id="m-text"></p>
+      <div class="m-nav">
+        <button type="button" id="m-prev">‹ Previous day</button>
+        <button type="button" id="m-next">Next day ›</button>
+        <button type="button" class="close" id="m-close">Close</button>
+      </div>
+    </figcaption>
+  </figure>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ===== Settings you may want to change ===== */
+const TITLE = 'Hollow Hill';
+const SUBTITLE = 'A Halloween calendar. One window opens each day from 5 to 29 October.';
+/* Testing shortcut: press and hold the title for 2 seconds to preview the last day with every window
+   cascading open. Anyone who finds it can peek at every day, so set this to false before sharing. */
+const TEST_GESTURE = false;
+/* The calendar runs 5–29 October of the current year. Preview any day with ?date=2026-10-14
+   (add &last=9 to pretend you last visited on the 9th and watch the cascade). */
+
+/* ===== Illustrations: one function per day, 5..29 October ===== */
+const INK = '#0c0712';
+const BAT = 'M0 -6 L-4 -14 L-6 -4 C-14 -8 -26 -16 -50 -10 C-42 -4 -40 4 -42 10 C-34 4 -26 6 -22 14 C-16 8 -10 8 -6 12 L0 16 L6 12 C10 8 16 8 22 14 C26 6 34 4 42 10 C40 4 42 -4 50 -10 C26 -16 14 -8 6 -4 L4 -14 Z';
+const GHOST = 'M-54 154 C-54 52 -32 0 0 0 C32 0 54 52 54 154 L42 140 L30 156 L16 140 L0 158 L-16 140 L-30 156 L-42 140 Z';
+
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function frame(u, top, bottom, inner, defs){
+  return `<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><defs><linearGradient id="${u}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient><filter id="${u}b" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"/></filter><filter id="${u}c" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>${defs||''}</defs><rect width="400" height="400" fill="url(#${u}s)"/>${inner}</svg>`;
+}
+function moon(u,cx,cy,r,c){ c=c||'#fbf0d0'; return `<circle cx="${cx}" cy="${cy}" r="${r*1.5}" fill="${c}" opacity=".22" filter="url(#${u}b)"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}"/><circle cx="${cx-r*.32}" cy="${cy-r*.18}" r="${r*.17}" fill="#000" opacity=".06"/><circle cx="${cx+r*.28}" cy="${cy+r*.3}" r="${r*.24}" fill="#000" opacity=".05"/><circle cx="${cx+r*.12}" cy="${cy-r*.42}" r="${r*.1}" fill="#000" opacity=".05"/>`; }
+function stars(seed,n,maxY,c){ const r=rng(seed); let s=''; for(let i=0;i<n;i++){ s+=`<circle cx="${(r()*400).toFixed(1)}" cy="${(r()*maxY).toFixed(1)}" r="${(0.6+r()*1.3).toFixed(2)}" fill="${c||'#fff'}" opacity="${(0.35+r()*0.6).toFixed(2)}"/>`; } return s; }
+function bat(x,y,s,rot,fill){ return `<path transform="translate(${x} ${y}) rotate(${rot}) scale(${s})" fill="${fill||INK}" d="${BAT}"/>`; }
+function crow(x,y,s,flip){ return `<g transform="translate(${x} ${y}) scale(${flip?-s:s} ${s})" fill="${INK}"><ellipse cx="0" cy="0" rx="13" ry="7" transform="rotate(-18)"/><circle cx="-11" cy="-7" r="5.5"/><path d="M-15 -8 L-24 -5 L-15 -4 Z"/><path d="M10 2 L25 9 L23 2 L12 -3 Z"/><path d="M-2 6 L-3 13 M3 5 L4 13" stroke="${INK}" stroke-width="1.8"/></g>`; }
+function flyer(x,y,s){ return `<path transform="translate(${x} ${y}) scale(${s})" d="M-14 0 Q-7 -8 0 0 Q7 -8 14 0" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>`; }
+
+const ILLOS = [
+/* 5 Oct  The cat on the wall */
+u => frame(u,'#2a1240','#f08a3c', `
+ ${stars(5,26,160)}
+ ${moon(u,252,160,100,'#ffe9b8')}
+ <g fill="${INK}">
+  <path d="M144 304 L154 304 L158 268 C190 262 236 262 262 268 L266 304 L278 304 L280 244 C278 200 238 186 206 192 C176 198 156 214 148 236 Z"/>
+  <circle cx="140" cy="236" r="22"/>
+  <path d="M122 226 L117 194 L138 214 Z M146 214 L161 192 L161 226 Z"/>
+  <rect x="0" y="302" width="400" height="98"/>
+ </g>
+ <path d="M276 250 C308 246 322 214 302 182" stroke="${INK}" stroke-width="10" fill="none" stroke-linecap="round"/>
+ <path d="M0 332 H400 M0 364 H400 M60 302 V332 M150 332 V364 M240 302 V332 M330 332 V364 M100 364 V400 M210 364 V400 M300 302 V332 M360 364 V400" stroke="#3a2140" stroke-width="2"/>
+ <ellipse class="blk" cx="132" cy="234" rx="4" ry="5.5" fill="#f7d34a"/><ellipse class="blk" cx="148" cy="234" rx="4" ry="5.5" fill="#f7d34a"/>
+ ${bat(70,90,.45,-10)}`),
+
+/* 6  Night flight */
+u => frame(u,'#120a2a','#7a4fc4', `
+ ${stars(6,40,260)}
+ ${moon(u,200,186,120,'#f3ecff')}
+ ${bat(150,150,1.1,-8)}${bat(252,212,1.5,6)}${bat(302,118,.8,10)}${bat(108,252,.7,-14)}${bat(222,104,.6,0)}${bat(334,262,.55,12)}${bat(66,118,.5,-5)}
+ <path d="M0 342 Q90 312 180 336 T400 320 L400 400 L0 400 Z" fill="${INK}"/>
+ <path d="M292 334 V282 H320 V334 Z M289 286 L306 232 L323 286 Z M305 232 V214" fill="${INK}" stroke="${INK}" stroke-width="2"/>
+ <rect x="302" y="292" width="8" height="12" rx="4" fill="#f6c768"/>`),
+
+/* 7  The broom rider */
+u => frame(u,'#1c0d05','#e9a23b', `
+ ${moon(u,210,180,118,'#fff2c9')}
+ <path d="M110 238 L312 196" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>
+ <g fill="${INK}">
+  <path d="M120 236 L72 220 L62 234 L66 250 L74 258 L124 244 Z"/>
+  <path d="M212 168 C200 172 180 182 148 208 C170 206 186 212 200 216 L224 212 C228 196 226 180 212 168 Z"/>
+  <circle cx="222" cy="160" r="11"/>
+  <path d="M198 154 L246 148 L246 153 L200 159 Z"/>
+  <path d="M206 153 L234 150 L214 116 L190 104 L204 122 Z"/>
+  <path d="M232 160 L243 167 L231 167 Z"/>
+ </g>
+ <path d="M214 182 L248 200" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>
+ <path d="M212 210 L240 216 L234 242" stroke="${INK}" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M70 226 L40 222 M66 240 L34 242 M70 252 L42 264" stroke="${INK}" stroke-width="2.5"/>
+ ${bat(80,90,.6,-10)}${bat(332,296,.5,8)}${bat(120,318,.4,0)}
+ <path d="M0 362 Q60 342 120 352 L134 330 L148 352 Q260 340 400 358 L400 400 L0 400 Z" fill="${INK}"/>`),
+
+/* 8  Something in the hallway */
+u => frame(u,'#04060c','#1a2636', `
+ <path d="M0 0 L170 140 L170 250 L0 400 Z" fill="#0b1119"/>
+ <path d="M400 0 L230 140 L230 250 L400 400 Z" fill="#0b1119"/>
+ <path d="M0 400 L170 250 L230 250 L400 400 Z" fill="#06090e"/>
+ <path d="M0 0 L170 140 L230 140 L400 0 Z" fill="#0e1520"/>
+ <path d="M70 110 L120 150 L120 290 L70 330 Z M330 110 L280 150 L280 290 L330 330 Z" fill="#141f2c"/>
+ <circle cx="112" cy="226" r="3" fill="#3a4a5a"/><circle cx="288" cy="226" r="3" fill="#3a4a5a"/>
+ <rect x="150" y="120" width="100" height="150" fill="#cfe2ef" opacity=".3" filter="url(#${u}b)"/>
+ <rect x="170" y="140" width="60" height="110" fill="#cfe2ef" opacity=".85"/>
+ <ellipse cx="200" cy="340" rx="80" ry="10" fill="#cfe2ef" opacity=".1"/>
+ <ellipse cx="200" cy="255" rx="80" ry="100" fill="#e8f2fa" opacity=".2" filter="url(#${u}b)"/>
+ <g transform="translate(200 176)">
+  <path d="${GHOST}" fill="#eef4f8" opacity=".94"/>
+  <ellipse class="blk" cx="-14" cy="48" rx="6" ry="10" fill="${INK}"/><ellipse class="blk" cx="14" cy="48" rx="6" ry="10" fill="${INK}"/>
+  <ellipse cx="0" cy="78" rx="6" ry="9" fill="${INK}" opacity=".85"/>
+ </g>`),
+
+/* 9  Nevermore */
+u => frame(u,'#0e0a16','#5b4a72', `
+ ${stars(9,20,140)}
+ ${moon(u,205,150,105,'#efe6ff')}
+ <rect x="0" y="352" width="400" height="48" fill="${INK}"/>
+ <path d="M150 300 C150 262 172 244 200 244 C228 244 250 262 250 300 C250 318 242 326 236 330 L236 354 L164 354 L164 330 C158 326 150 318 150 300 Z" fill="#d9ccb0"/>
+ <ellipse cx="180" cy="298" rx="15" ry="14" fill="${INK}"/><ellipse cx="220" cy="298" rx="15" ry="14" fill="${INK}"/>
+ <path d="M200 312 L192 328 L208 328 Z" fill="${INK}"/>
+ <path d="M176 338 V354 M188 338 V354 M200 338 V354 M212 338 V354 M224 338 V354 M164 340 H236" stroke="${INK}" stroke-width="2.5"/>
+ <g fill="${INK}">
+  <path d="M196 250 C184 238 184 206 204 194 C222 182 248 192 254 212 C260 228 272 240 296 254 C270 254 254 248 242 246 C228 252 210 254 196 250 Z"/>
+  <circle cx="200" cy="184" r="17"/>
+  <path d="M188 178 L154 189 L188 195 Z"/>
+ </g>
+ <circle cx="196" cy="180" r="2.8" fill="#f0c75a"/>
+ <path d="M210 248 L208 258 M226 248 L228 258" stroke="${INK}" stroke-width="3"/>`),
+
+/* 10 The spinner */
+u => { const cx=176, cy=160, sp=12, ang=[], rings=[26,50,78,110,146,186,232]; let w='';
+  for(let i=0;i<sp;i++) ang.push(i*2*Math.PI/sp + .15);
+  ang.forEach(a=> w+=`M${cx} ${cy} L${(cx+Math.cos(a)*340).toFixed(1)} ${(cy+Math.sin(a)*340).toFixed(1)} `);
+  rings.forEach(r=>{ for(let i=0;i<sp;i++){ const a1=ang[i], a2=ang[(i+1)%sp]; let am=(a1+a2)/2; if(i===sp-1) am+=Math.PI; const x1=cx+Math.cos(a1)*r, y1=cy+Math.sin(a1)*r, x2=cx+Math.cos(a2)*r, y2=cy+Math.sin(a2)*r, mx=cx+Math.cos(am)*r*.84, my=cy+Math.sin(am)*r*.84; w+=`M${x1.toFixed(1)} ${y1.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)} `; } });
+  let legs=''; [-1,1].forEach(s=>{ for(let k=0;k<4;k++){ legs+=`<polyline points="${s*6},${-8+k*5} ${s*(26+(k===1||k===2?8:0))},${-34+k*20} ${s*44},${-18+k*24}" fill="none" stroke="${INK}" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>`; } });
+  return frame(u,'#070b08','#38553a', `
+  ${moon(u,330,80,58,'#e9f2df')}
+  <path d="${w}" stroke="#d8e4d6" stroke-width="1.3" fill="none" opacity=".5"/>
+  <path d="M248 0 V214" stroke="#d8e4d6" stroke-width="1" opacity=".6"/>
+  <g transform="translate(248 238) rotate(-8)">${legs}<ellipse cx="0" cy="14" rx="17" ry="21" fill="${INK}"/><circle cx="0" cy="-10" r="10" fill="${INK}"/><path d="M-6 8 L6 8 L0 16 L6 24 L-6 24 L0 16 Z" fill="#c2252f"/><circle cx="-4" cy="-13" r="1.8" fill="#ff5a4a"/><circle cx="4" cy="-13" r="1.8" fill="#ff5a4a"/></g>`); },
+
+/* 11 First light */
+u => { const face = `<path d="M146 236 L182 236 L166 202 Z M218 236 L254 236 L234 202 Z M190 268 L210 268 L200 250 Z M138 282 L158 294 L170 284 L186 296 L200 286 L214 296 L230 284 L242 294 L262 282 Q238 334 200 336 Q162 334 138 282 Z"/>`;
+ return frame(u,'#0f0603','#3e1606', `
+ <circle class="flk" cx="200" cy="256" r="170" fill="#ff7a1a" opacity=".35" filter="url(#${u}b)"/>
+ <ellipse cx="200" cy="344" rx="150" ry="18" fill="#000" opacity=".5"/>
+ <path d="M196 178 C194 160 198 146 212 136 L221 144 C211 152 209 164 211 180 Z" fill="#4b5a24"/>
+ <g stroke="#9c3d08" stroke-width="3">
+  <ellipse cx="120" cy="262" rx="48" ry="72" fill="#d85c12"/><ellipse cx="280" cy="262" rx="48" ry="72" fill="#d85c12"/>
+  <ellipse cx="152" cy="258" rx="60" ry="80" fill="#e66b17"/><ellipse cx="248" cy="258" rx="60" ry="80" fill="#e66b17"/>
+  <ellipse cx="200" cy="256" rx="64" ry="84" fill="#f07a1f"/>
+ </g>
+ <g class="flk" fill="#ffc23a" filter="url(#${u}c)">${face}</g>
+ <g fill="#ffe08a">${face}</g>`); },
+
+/* 12 Who watches */
+u => frame(u,'#050914','#2c3d6e', `
+ ${stars(12,34,220)}
+ ${moon(u,258,142,98,'#eef2ff')}
+ <g fill="${INK}">
+  <path d="M0 268 C80 262 160 262 240 256 C280 252 320 244 360 232 L364 240 C322 254 282 262 242 266 C162 272 82 276 0 280 Z"/>
+  <path d="M140 210 C138 168 150 140 160 132 L155 110 L174 127 C178 125 186 125 190 127 L209 110 L204 132 C214 140 224 168 222 210 C220 240 204 258 181 258 C158 258 142 240 140 210 Z"/>
+ </g>
+ <path d="M240 258 L272 218 L284 196 M272 220 L304 212 M96 270 L76 236 L82 214 M300 248 L344 272 M30 276 L14 300" stroke="${INK}" stroke-width="5" fill="none" stroke-linecap="round"/>
+ <path d="M170 258 L168 267 M178 258 L178 268 M188 258 L189 268 M196 258 L199 267" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="168" cy="158" r="11.5" fill="#f3c53b"/><circle cx="196" cy="158" r="11.5" fill="#f3c53b"/>
+ <circle class="blk" cx="168" cy="158" r="5.5" fill="${INK}"/><circle class="blk" cx="196" cy="158" r="5.5" fill="${INK}"/>
+ <path d="M178 170 L186 170 L182 181 Z" fill="#3b2a10"/>`),
+
+/* 13 Restless */
+u => { const bone='#e2e6d4'; const f=(pts,w)=>`<polyline points="${pts}" fill="none" stroke="${bone}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+ return frame(u,'#061010','#2f6b5c', `
+ ${stars(13,24,200,'#e6f5e8')}
+ ${moon(u,84,82,40,'#e6f5e8')}
+ <path d="M300 340 L306 220 L290 180 M306 222 L330 196 L350 190 M304 250 L270 228" stroke="#0a1513" stroke-width="7" fill="none" stroke-linecap="round"/>
+ <path d="M64 344 V242 C64 204 158 204 158 242 V344 Z" fill="#14201e"/>
+ <path d="M111 246 V292 M95 262 H127" stroke="#2c3e3a" stroke-width="6"/>
+ <ellipse cx="200" cy="350" rx="190" ry="26" fill="#bfe6d6" opacity=".16" filter="url(#${u}b)"/>
+ ${f('232,352 238,272',9)}${f('248,352 252,272',9)}
+ <circle cx="238" cy="266" r="6" fill="${bone}"/><circle cx="249" cy="264" r="6" fill="${bone}"/><circle cx="257" cy="269" r="5" fill="${bone}"/><circle cx="244" cy="256" r="6" fill="${bone}"/>
+ ${f('240,258 236,232',6.5)}${f('248,256 250,226',6.5)}${f('255,258 264,230',6.5)}${f('260,262 276,240',6)}${f('234,264 218,248',6.5)}
+ ${f('236,232 234,208 233,190',5.5)}${f('250,226 252,200 254,178',5.5)}${f('264,230 270,206 274,190',5.5)}${f('276,240 286,222 292,210',5)}${f('218,248 206,234 198,222',5.5)}
+ <path d="M110 400 L146 352 Q240 318 334 352 L372 400 Z" fill="${INK}"/>
+ <circle cx="176" cy="346" r="6" fill="${INK}"/><circle cx="300" cy="344" r="5" fill="${INK}"/><circle cx="216" cy="336" r="4" fill="${INK}"/>
+ <ellipse cx="200" cy="384" rx="220" ry="22" fill="#bfe6d6" opacity=".12" filter="url(#${u}b)"/>`); },
+
+/* 14 The last candle */
+u => { const flame=(x,y)=>`<g class="flk"><circle cx="${x}" cy="${y+8}" r="60" fill="#ff9a2a" opacity=".3" filter="url(#${u}b)"/><path d="M${x} ${y-24} C${x-9} ${y-10} ${x-8} ${y+2} ${x} ${y+2} C${x+8} ${y+2} ${x+9} ${y-10} ${x} ${y-24} Z" fill="#ffc94a"/><path d="M${x} ${y-12} C${x-4} ${y-4} ${x-4} ${y+1} ${x} ${y+1} C${x+4} ${y+1} ${x+4} ${y-4} ${x} ${y-12} Z" fill="#fff4c2"/></g>`;
+ return frame(u,'#0d0705','#3a1c0c', `
+ <rect x="0" y="360" width="400" height="40" fill="#120905"/>
+ <path d="M200 262 C200 232 130 252 130 212 M200 262 C200 232 270 252 270 212 M200 262 V190" stroke="#1c120c" stroke-width="9" fill="none"/>
+ <g fill="#1c120c"><path d="M158 362 L242 362 L228 340 L172 340 Z"/><rect x="194" y="252" width="12" height="90"/><ellipse cx="200" cy="300" rx="15" ry="8"/><ellipse cx="130" cy="212" rx="17" ry="5"/><ellipse cx="200" cy="190" rx="17" ry="5"/><ellipse cx="270" cy="212" rx="17" ry="5"/></g>
+ <g fill="#ece0c6"><rect x="120" y="150" width="20" height="60"/><rect x="190" y="110" width="20" height="80"/><rect x="261" y="168" width="18" height="44"/>
+ <path d="M120 150 C120 162 116 172 118 182 C122 182 122 164 126 152 Z M210 112 C210 124 214 132 212 146 C208 146 208 128 204 114 Z M261 170 C261 180 258 186 260 194 C264 194 264 182 266 172 Z"/></g>
+ <path d="M130 150 V142 M200 110 V102 M270 168 V160" stroke="#222" stroke-width="2"/>
+ ${flame(130,140)}${flame(200,100)}${flame(270,158)}`); },
+
+/* 15 Double, double */
+u => frame(u,'#05110a','#1d4a29', `
+ <circle cx="200" cy="370" r="110" fill="#ff7a1a" opacity=".35" filter="url(#${u}b)"/>
+ <rect x="130" y="370" width="140" height="14" rx="7" fill="#2b1608" transform="rotate(-7 200 377)"/><rect x="130" y="370" width="140" height="14" rx="7" fill="#24130a" transform="rotate(7 200 377)"/>
+ <path class="flk" d="M140 380 C140 350 160 352 162 330 C176 350 172 360 186 352 C186 336 196 326 200 312 C210 330 214 346 222 350 C230 340 234 336 236 326 C248 346 262 356 260 380 Z" fill="#ff7a1a"/>
+ <path class="flk" d="M160 380 C162 362 172 360 176 348 C186 362 194 356 200 340 C208 356 216 362 226 352 C236 364 240 370 240 380 Z" fill="#ffd34a"/>
+ <g fill="${INK}"><path d="M136 334 L124 364 L136 364 L148 340 Z M264 334 L276 364 L264 364 L252 340 Z"/><path d="M106 226 C96 300 136 352 200 352 C264 352 304 300 294 226 Z"/><ellipse cx="200" cy="226" rx="104" ry="21"/></g>
+ <ellipse cx="200" cy="226" rx="88" ry="12" fill="#7df26a"/>
+ <ellipse cx="200" cy="215" rx="100" ry="30" fill="#7df26a" opacity=".3" filter="url(#${u}b)"/>
+ <g fill="#a6ff8a" stroke="#4fbf3f" stroke-width="2"><circle cx="170" cy="219" r="9"/><circle cx="214" cy="214" r="12"/><circle cx="242" cy="222" r="6"/><circle cx="190" cy="208" r="5"/></g>
+ <path d="M180 200 C160 170 200 150 180 112 C170 92 190 72 184 50 M222 200 C242 168 206 140 232 100 C244 80 230 60 240 40" stroke="#9cff8a" stroke-width="12" fill="none" stroke-linecap="round" opacity=".28"/>
+ <path d="M200 120 C188 100 212 84 202 64" stroke="#c8ffb8" stroke-width="5" fill="none" stroke-linecap="round" opacity=".35"/>`),
+
+/* 16 The old oak */
+u => frame(u,'#12050a','#8a2c18', `
+ ${stars(16,18,150)}
+ ${moon(u,300,112,72,'#ffd9b0')}
+ <path d="M115 148 L62 108 L28 116 M80 120 L70 80 M176 108 L160 58 L182 26 M166 74 L134 52 M272 146 L330 108 L372 118 M318 116 L330 74 M224 200 L250 186" stroke="${INK}" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M50 112 L36 92 M28 116 L10 112 M182 26 L176 8 M372 118 L392 104 M330 74 L344 56" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/>
+ <path d="M150 400 C160 340 170 300 165 240 C160 200 140 170 110 150 L120 140 C150 156 172 176 182 200 C186 170 182 140 170 110 L184 106 C198 140 204 170 200 200 C214 172 236 152 270 140 L276 152 C246 166 226 190 222 230 C218 300 236 350 260 400 Z" fill="${INK}"/>
+ <path d="M150 400 C130 386 100 384 80 392 M258 400 C280 388 312 388 330 396" stroke="${INK}" stroke-width="8" fill="none" stroke-linecap="round"/>
+ <ellipse cx="196" cy="285" rx="44" ry="50" fill="#ff8a2a" opacity=".28" filter="url(#${u}b)"/>
+ <path class="flk" d="M172 262 C178 252 190 252 192 262 C186 270 178 270 172 262 Z M200 260 C204 250 216 250 220 260 C214 268 206 268 200 260 Z" fill="#ffb347"/>
+ <path class="flk" d="M178 312 C188 298 208 298 216 314 C208 330 186 332 178 312 Z" fill="#ff8a2a"/>
+ <path d="M0 384 Q200 362 400 386 L400 400 L0 400 Z" fill="${INK}"/>`),
+
+/* 17 Do not open */
+u => frame(u,'#0a0507','#3a1d28', `
+ <rect x="0" y="360" width="400" height="40" fill="#0a0507"/>
+ <circle cx="70" cy="300" r="50" fill="#ffb347" opacity=".25" filter="url(#${u}b)"/>
+ <rect x="62" y="300" width="16" height="60" fill="#ece0c6"/><path class="flk" d="M70 278 C64 288 64 296 70 296 C76 296 76 288 70 278 Z" fill="#ffc94a"/>
+ <g transform="rotate(-4 200 370)">
+  <path d="M176 50 L224 50 L262 122 L236 368 L164 368 L138 122 Z" fill="#2a160d"/>
+  <path d="M180 62 L220 62 L250 124 L228 356 L172 356 L150 124 Z" fill="#050207"/>
+  <ellipse cx="164" cy="140" rx="5" ry="3" fill="#ff3b2f"/><ellipse cx="182" cy="140" rx="5" ry="3" fill="#ff3b2f"/>
+  <ellipse cx="173" cy="140" rx="20" ry="10" fill="#ff3b2f" opacity=".35" filter="url(#${u}c)"/>
+  <g transform="translate(34 6) rotate(4 200 210)">
+   <path d="M176 50 L224 50 L262 122 L236 368 L164 368 L138 122 Z" fill="#4a2a17" stroke="#2a160d" stroke-width="4"/>
+   <path d="M200 100 V210 M176 136 H224" stroke="#c9a24a" stroke-width="7"/>
+  </g>
+  <g fill="#cfc8bd"><rect x="174" y="226" width="15" height="9" rx="4.5"/><rect x="173" y="240" width="16" height="9" rx="4.5"/><rect x="174" y="254" width="15" height="9" rx="4.5"/><rect x="176" y="268" width="13" height="8" rx="4"/></g>
+ </g>`),
+
+/* 18 The howl */
+u => frame(u,'#050816','#3c4a8a', `
+ ${stars(18,40,240)}
+ ${moon(u,222,166,118,'#eef2ff')}
+ <path d="M0 330 L40 300 L70 320 L110 290 L150 316 L200 296 L260 318 L300 292 L340 312 L400 296 L400 400 L0 400 Z" fill="#141a36"/>
+ <g fill="${INK}">
+  <path d="M196 306 L200 262 L196 240 L191 234 L194 228 L187 222 L190 216 L180 206 C172 190 168 180 164 172 L140 150 L160 151 L131 130 L133 123 C146 127 156 131 166 135 L174 137 L183 104 L195 139 C203 146 209 156 213 168 C219 182 225 192 233 200 C251 214 265 232 273 260 C279 276 283 290 285 300 C297 298 311 296 317 300 C319 306 307 308 297 306 Z"/>
+  <path d="M110 306 L150 300 L330 298 L362 314 L400 342 L400 400 L40 400 L80 340 Z"/>
+  <path d="M30 400 L48 330 L66 400 Z M60 400 L82 312 L104 400 Z M330 400 L350 336 L370 400 Z"/>
+ </g>`),
+
+/* 19 We see you */
+u => { const r=rng(19); let trees='', eyes='';
+ for(let i=0;i<9;i++){ const x=r()*400, w=14+r()*26; const c=i%2?'#0a130d':'#0d1a11', by=60+r()*200, dir=r()<.5?-1:1; trees+=`<rect x="${x.toFixed(0)}" y="0" width="${w.toFixed(0)}" height="400" fill="${c}"/><path d="M${(x+w/2).toFixed(0)} ${by.toFixed(0)} l${dir*(30+w)} -${(20+w).toFixed(0)} l${dir*14} -18" stroke="${c}" stroke-width="${(w/4).toFixed(1)}" fill="none" stroke-linecap="round"/>`; }
+ const cols=['#f5d142','#e2452f','#8ff06a','#f5d142','#f0f0d0'];
+ for(let i=0;i<16;i++){ const x=30+r()*340, y=40+r()*300, s=2.5+r()*4, c=cols[i%cols.length], d=(r()*6).toFixed(1);
+  eyes+=`<g class="blk" style="animation-delay:-${d}s"><ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="${s.toFixed(1)}" ry="${(s*.7).toFixed(1)}" fill="${c}"/><ellipse cx="${(x+s*3.4).toFixed(0)}" cy="${y.toFixed(0)}" rx="${s.toFixed(1)}" ry="${(s*.7).toFixed(1)}" fill="${c}"/></g>`; }
+ return frame(u,'#020403','#0f1a12', `${trees}<rect width="400" height="400" fill="#000" opacity=".35"/>${eyes}<ellipse cx="200" cy="380" rx="260" ry="40" fill="#9fb8a8" opacity=".12" filter="url(#${u}b)"/><path d="M0 380 Q100 366 200 378 T400 372 V400 H0 Z" fill="${INK}"/>`); },
+
+/* 20 The apothecary */
+u => { const flask=(cx,yb,r,c)=>`<circle cx="${cx}" cy="${yb-r}" r="${r*1.6}" fill="${c}" opacity=".25" filter="url(#${u}b)"/><rect x="${cx-r*.28}" y="${yb-r*2.7}" width="${r*.56}" height="${r*.9}" fill="${c}" opacity=".8" stroke="#d9e0d0" stroke-width="1.5"/><rect x="${cx-r*.34}" y="${yb-r*2.95}" width="${r*.68}" height="${r*.32}" rx="2" fill="#7a5a3a"/><circle cx="${cx}" cy="${yb-r}" r="${r}" fill="${c}" opacity=".85" stroke="#d9e0d0" stroke-width="1.5"/><path d="M${cx-r*.55} ${yb-r*1.35} A${r*.7} ${r*.7} 0 0 1 ${cx-r*.1} ${yb-r*1.72}" stroke="#fff" stroke-width="2.5" fill="none" opacity=".6"/>`;
+ const tall=(x,yb,w,h,c)=>`<rect x="${x-w*.4}" y="${yb-h-10}" width="${w*1.8}" height="${h+10}" fill="${c}" opacity=".25" filter="url(#${u}b)"/><rect x="${x+w*.32}" y="${yb-h-14}" width="${w*.36}" height="16" fill="${c}" opacity=".8" stroke="#d9e0d0" stroke-width="1.5"/><rect x="${x+w*.28}" y="${yb-h-20}" width="${w*.44}" height="8" rx="2" fill="#7a5a3a"/><rect x="${x}" y="${yb-h}" width="${w}" height="${h}" rx="5" fill="${c}" opacity=".85" stroke="#d9e0d0" stroke-width="1.5"/><rect x="${x+w*.15}" y="${yb-h*.62}" width="${w*.7}" height="${h*.3}" fill="#e8dcc0"/><path d="M${x+w*.25} ${yb-h*.52} H${x+w*.75} M${x+w*.25} ${yb-h*.42} H${x+w*.6}" stroke="#6b5a40" stroke-width="1.5"/>`;
+ return frame(u,'#0d0906','#4a3417', `
+ <path d="M0 0 L60 0 M0 0 L0 60 M0 0 L52 30 M0 0 L30 52 M10 0 Q14 14 0 18 M26 0 Q28 26 0 34 M44 0 Q40 40 0 48" stroke="#cfc6b0" stroke-width="1" fill="none" opacity=".4"/>
+ <rect x="16" y="200" width="368" height="12" fill="#2a1a0c"/><rect x="16" y="340" width="368" height="12" fill="#2a1a0c"/>
+ <path d="M40 212 L40 230 L56 212 Z M344 212 L360 212 L360 230 Z M40 352 L40 370 L56 352 Z M344 352 L360 352 L360 370 Z" fill="#2a1a0c"/>
+ ${flask(78,200,32,'#7df26a')}${tall(124,200,40,92,'#9b5cf0')}
+ <g transform="translate(232 166)"><path d="M-28 10 C-28 -14 -14 -26 0 -26 C14 -26 28 -14 28 10 C28 20 22 24 18 26 L18 34 L-18 34 L-18 26 C-22 24 -28 20 -28 10 Z" fill="#d9ccb0"/><ellipse cx="-11" cy="6" rx="8" ry="7" fill="${INK}"/><ellipse cx="11" cy="6" rx="8" ry="7" fill="${INK}"/><path d="M0 14 L-4 22 L4 22 Z" fill="${INK}"/></g>
+ ${tall(284,200,18,42,'#ff4a3c')}${tall(310,200,18,52,'#4ab0f0')}${flask(352,200,20,'#f5c542')}
+ ${tall(46,340,34,86,'#4fd47a')}${flask(144,340,40,'#e8a83a')}
+ <rect x="214" y="268" width="76" height="72" rx="8" fill="#bcd6c0" opacity=".3" stroke="#d9e0d0" stroke-width="1.5"/><rect x="208" y="258" width="88" height="12" rx="3" fill="#5a4030"/>
+ <g><circle cx="236" cy="300" r="11" fill="#f2efe6"/><circle cx="239" cy="302" r="5" fill="#4a7ac0"/><circle cx="240" cy="302" r="2.4" fill="${INK}"/><circle cx="266" cy="318" r="10" fill="#f2efe6"/><circle cx="262" cy="315" r="4.5" fill="#6aa04a"/><circle cx="261" cy="314" r="2.2" fill="${INK}"/><circle cx="262" cy="288" r="8" fill="#f2efe6"/><circle cx="265" cy="290" r="3.6" fill="#a05a2a"/><circle cx="266" cy="291" r="1.8" fill="${INK}"/></g>
+ ${tall(318,340,30,50,'#c23a6a')}`); },
+
+/* 21 Will-o'-the-wisp */
+u => { const orb=(x,y,r)=>`<g class="flk"><circle cx="${x}" cy="${y}" r="${r*3.2}" fill="#7fe8ff" opacity=".45" filter="url(#${u}b)"/><circle cx="${x}" cy="${y}" r="${r}" fill="#e2fdff"/></g><ellipse cx="${x}" cy="${(280+(280-y)*.55).toFixed(0)}" rx="${r*1.4}" ry="${r*.6}" fill="#9feeff" opacity=".35"/>`;
+ return frame(u,'#030a10','#173840', `
+ ${stars(21,36,200,'#d8f6ff')}
+ <path d="M0 280 L0 250 L20 238 L34 252 L50 230 L70 246 L96 226 L120 248 L150 236 L180 252 L214 232 L240 250 L270 238 L300 252 L330 230 L360 248 L400 236 L400 280 Z" fill="#06141a"/>
+ <rect x="0" y="280" width="400" height="120" fill="#04101a"/>
+ <path d="M30 300 H120 M200 316 H330 M80 340 H190 M250 362 H380" stroke="#2a5a6a" stroke-width="1.5" opacity=".6"/>
+ <path d="M60 280 L64 180 L50 150 M64 196 L86 170 M330 280 L326 190 L344 160 M326 210 L304 190" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/>
+ ${orb(120,226,6)}${orb(172,248,5)}${orb(232,210,8)}${orb(292,240,5)}${orb(336,198,6)}
+ <g stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"><path d="M20 400 Q24 340 14 300 M34 400 Q36 350 44 316 M46 400 Q50 360 40 330 M360 400 Q356 340 368 304 M374 400 Q378 350 386 320 M388 400 Q386 360 396 336"/></g>
+ <g fill="${INK}"><ellipse cx="14" cy="300" rx="4" ry="12"/><ellipse cx="44" cy="314" rx="4" ry="12"/><ellipse cx="368" cy="302" rx="4" ry="12"/></g>
+ <g fill="#0e2630"><ellipse cx="170" cy="372" rx="26" ry="7"/><ellipse cx="214" cy="346" rx="20" ry="6"/><ellipse cx="190" cy="318" rx="16" ry="5"/></g>`); },
+
+/* 22 The fairy ring */
+u => { const pts=[]; for(let i=0;i<9;i++){ const a=i/9*Math.PI*2+.3; pts.push({x:200+Math.cos(a)*130, y:292+Math.sin(a)*42}); } pts.sort((a,b)=>a.y-b.y);
+ let m=''; pts.forEach(p=>{ const s=.62+.62*((p.y-250)/84); m+=`<g transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(${s.toFixed(2)})"><ellipse cx="0" cy="-10" rx="30" ry="22" fill="#c08cff" opacity=".35" filter="url(#${u}c)"/><rect x="-5" y="-28" width="10" height="28" rx="4" fill="#efe3d0"/><path d="M-24 -26 Q0 -64 24 -26 Z" fill="#d3343a"/><circle cx="-9" cy="-36" r="3" fill="#fff"/><circle cx="6" cy="-42" r="3.5" fill="#fff"/><circle cx="12" cy="-32" r="2.4" fill="#fff"/></g>`; });
+ const r=rng(22); let sp=''; for(let i=0;i<22;i++){ sp+=`<circle class="flk" style="animation-delay:-${(r()*2).toFixed(1)}s" cx="${(70+r()*260).toFixed(0)}" cy="${(120+r()*170).toFixed(0)}" r="${(1+r()*2).toFixed(1)}" fill="#efe0ff"/>`; }
+ return frame(u,'#08060f','#2a1f4a', `
+ ${stars(22,30,180)}
+ <path d="M318 46 A40 40 0 1 1 318 126 A32 40 0 0 0 318 46 Z" fill="#f2ecff"/>
+ <rect x="0" y="250" width="400" height="150" fill="#0d0a18"/>
+ <ellipse cx="200" cy="292" rx="160" ry="56" fill="#b48cff" opacity=".2" filter="url(#${u}b)"/>
+ <path d="M0 0 V400 H24 V120 L50 60 L30 0 Z M400 0 V400 H372 V150 L350 80 L380 0 Z" fill="${INK}"/>
+ ${m}${sp}`); },
+
+/* 23 Keeper of the field */
+u => frame(u,'#1a0b06','#d0601e', `
+ ${moon(u,200,236,126,'#ffcf7a')}
+ <path d="M0 330 Q100 306 200 320 T400 312 V400 H0 Z" fill="#2a1208"/>
+ <g fill="${INK}">
+  <rect x="196" y="150" width="8" height="250"/><rect x="104" y="188" width="192" height="8"/>
+  <path d="M168 186 L232 186 L244 302 L230 292 L220 308 L208 294 L196 310 L184 294 L172 306 L162 292 L156 302 Z"/>
+  <path d="M170 186 L110 190 L102 214 L112 207 L118 220 L126 206 L172 214 Z M230 186 L290 190 L298 214 L288 207 L282 220 L274 206 L228 214 Z"/>
+  <circle cx="200" cy="166" r="22"/>
+  <path d="M162 154 C180 146 220 146 240 150 L238 157 C220 152 182 153 164 160 Z M182 150 L186 118 C196 110 212 112 216 120 L222 149 Z"/>
+ </g>
+ <path d="M104 200 L90 194 M104 204 L88 206 M106 208 L94 216 M296 200 L310 194 M296 204 L312 206 M294 208 L306 216" stroke="${INK}" stroke-width="2.5"/>
+ <path class="flk" d="M187 160 L196 160 L191.5 169 Z M204 160 L213 160 L208.5 169 Z" fill="#ff9a2a"/>
+ <path d="M188 178 Q200 186 212 178 M192 176 V182 M200 178 V184 M208 176 V182" stroke="#ff9a2a" stroke-width="1.6" fill="none"/>
+ ${crow(268,174,1.25,false)}${crow(130,176,1,true)}
+ ${flyer(90,90,1.2)}${flyer(120,70,.9)}${flyer(320,110,1)}${flyer(296,84,.7)}
+ <g stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"><path d="M30 400 Q34 330 26 270 M30 330 Q10 320 0 330 M28 300 Q48 290 58 300 M70 400 Q66 340 76 290 M72 340 Q90 330 100 342 M330 400 Q334 340 326 286 M330 320 Q310 310 300 320 M370 400 Q366 336 378 280 M372 330 Q392 320 400 330"/></g>`),
+
+/* 24 The keyhole */
+u => { let g=''; for(let i=0;i<9;i++){ const x=20+i*46; g+=`<path d="M${x} 0 C${x+10} 100 ${x-10} 200 ${x+6} 400" stroke="#3a2414" stroke-width="2" fill="none" opacity=".6"/>`; }
+ return frame(u,'#120a06','#2e1a0e', `${g}
+ <ellipse cx="200" cy="232" rx="74" ry="124" fill="#7a5a22" opacity=".5" filter="url(#${u}c)"/>
+ <ellipse cx="200" cy="230" rx="70" ry="120" fill="#a9843a" stroke="#6e521f" stroke-width="4"/>
+ <ellipse cx="200" cy="230" rx="58" ry="106" fill="none" stroke="#c9a24a" stroke-width="2"/>
+ <circle cx="200" cy="128" r="5" fill="#6e521f"/><circle cx="200" cy="332" r="5" fill="#6e521f"/>
+ <path d="M200 154 A36 36 0 0 1 216 222 L228 300 L172 300 L184 222 A36 36 0 0 1 200 154 Z" fill="#140c08"/>
+ <circle cx="200" cy="190" r="34" fill="#3a2414" opacity=".8"/>
+ <path d="M168 190 Q200 168 232 190 Q200 212 168 190 Z" fill="#f1ece0"/>
+ <path d="M172 192 L180 190 M226 188 L218 190" stroke="#c0392b" stroke-width="1" opacity=".7"/>
+ <circle cx="200" cy="190" r="12" fill="#6a9a3a"/><circle class="blk" cx="200" cy="190" r="6" fill="${INK}"/><circle cx="204" cy="186" r="2.5" fill="#fff"/>
+ <path d="M168 190 Q200 166 232 190" stroke="${INK}" stroke-width="2.5" fill="none"/>`); },
+
+/* 25 The seer */
+u => { const r=rng(25); let sp=''; for(let i=0;i<10;i++){ const x=40+r()*320, y=40+r()*220, s=3+r()*5; sp+=`<path d="M${x} ${y-s} L${x+s*.25} ${y-s*.25} L${x+s} ${y} L${x+s*.25} ${y+s*.25} L${x} ${y+s} L${x-s*.25} ${y+s*.25} L${x-s} ${y} L${x-s*.25} ${y-s*.25} Z" fill="#e9dcff" opacity=".8"/>`; }
+ return frame(u,'#0a0614','#3d1f5a', `
+ ${sp}
+ <ellipse cx="200" cy="370" rx="260" ry="60" fill="#2a0f30"/>
+ <circle cx="200" cy="205" r="130" fill="#9b7aff" opacity=".35" filter="url(#${u}b)"/>
+ <path d="M146 334 L254 334 L238 296 L162 296 Z" fill="#c9a24a"/><ellipse cx="200" cy="334" rx="62" ry="10" fill="#a8822e"/>
+ <circle cx="200" cy="205" r="100" fill="url(#${u}ball)"/>
+ <path d="M130 230 C150 180 230 260 270 200 M140 170 C180 140 220 200 260 160" stroke="#e6dcff" stroke-width="3" fill="none" opacity=".35"/>
+ <g opacity=".6"><ellipse class="blk" cx="182" cy="198" rx="9" ry="4" fill="#140a28"/><ellipse class="blk" cx="218" cy="198" rx="9" ry="4" fill="#140a28"/><ellipse cx="200" cy="236" rx="9" ry="13" fill="#140a28"/></g>
+ <ellipse cx="164" cy="156" rx="24" ry="12" fill="#fff" opacity=".45" transform="rotate(-30 164 156)"/>`,
+ `<radialGradient id="${u}ball" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#cdbaff"/><stop offset=".55" stop-color="#5a3aa8"/><stop offset="1" stop-color="#1c0f3a"/></radialGradient>`); },
+
+/* 26 The portrait */
+u => { let wp=''; for(let y=20;y<400;y+=40) for(let x=(y/40)%2?20:0;x<400;x+=40) wp+=`<path d="M${x} ${y-8} L${x+6} ${y} L${x} ${y+8} L${x-6} ${y} Z"/>`;
+ const sconce=x=>`<circle cx="${x}" cy="226" r="34" fill="#ffb347" opacity=".3" filter="url(#${u}b)"/><rect x="${x-4}" y="232" width="8" height="26" fill="#ece0c6"/><path d="M${x-12} 258 H${x+12} L${x} 272 Z" fill="#8a6a2a"/><path class="flk" d="M${x} 214 C${x-6} 224 ${x-6} 232 ${x} 232 C${x+6} 232 ${x+6} 224 ${x} 214 Z" fill="#ffc94a"/>`;
+ return frame(u,'#0c0806','#2b1a10', `
+ <g fill="#ffffff" opacity=".05">${wp}</g>
+ <path d="M200 20 L150 64 M200 20 L250 64" stroke="#8a6a2a" stroke-width="2"/><circle cx="200" cy="20" r="4" fill="#8a6a2a"/>
+ <ellipse cx="200" cy="195" rx="100" ry="130" fill="#1e1610"/>
+ <g clip-path="url(#${u}pc)">
+  <path d="M100 340 C112 270 156 252 200 252 C244 252 288 270 300 340 Z" fill="#2a1e16"/>
+  <path d="M186 252 L200 290 L214 252 Z" fill="#e8e0d0"/>
+  <ellipse cx="200" cy="196" rx="36" ry="46" fill="#bfae96"/>
+  <path d="M162 186 C158 136 242 136 238 186 C232 160 168 160 162 186 Z" fill="#1a120c"/>
+  <ellipse cx="186" cy="194" rx="8" ry="5" fill="#2a1e16"/><ellipse cx="214" cy="194" rx="8" ry="5" fill="#2a1e16"/>
+  <circle cx="186" cy="194" r="2.6" fill="#ff3b2f"/><circle cx="214" cy="194" r="2.6" fill="#ff3b2f"/>
+  <circle cx="200" cy="194" r="22" fill="#ff3b2f" opacity=".2" filter="url(#${u}c)"/>
+  <path d="M200 198 L196 214 L204 214" stroke="#8a7560" stroke-width="2" fill="none"/>
+  <path d="M188 226 Q200 222 212 226" stroke="#5a3a2a" stroke-width="2.5" fill="none"/>
+ </g>
+ <ellipse cx="200" cy="195" rx="112" ry="142" fill="none" stroke="#b8902f" stroke-width="22"/>
+ <ellipse cx="200" cy="195" rx="101" ry="131" fill="none" stroke="#6e521f" stroke-width="3"/>
+ <ellipse cx="200" cy="195" rx="124" ry="154" fill="none" stroke="#7a5a1a" stroke-width="3"/>
+ <circle cx="200" cy="44" r="10" fill="#c9a24a"/><circle cx="200" cy="346" r="10" fill="#c9a24a"/>
+ ${sconce(46)}${sconce(354)}`,
+ `<clipPath id="${u}pc"><ellipse cx="200" cy="195" rx="100" ry="130"/></clipPath>`); },
+
+/* 27 The night visitor */
+u => frame(u,'#12020a','#7a0f24', `
+ ${stars(27,20,160,'#ffd0d0')}
+ ${moon(u,222,152,112,'#ffb3a3')}
+ ${bat(70,80,.5,-8)}${bat(340,96,.6,10)}${bat(320,60,.35,0)}
+ <g fill="${INK}">
+  <path d="M200 146 L150 160 C120 170 90 160 70 150 C84 180 86 200 96 220 C104 214 112 214 120 222 C128 214 138 214 146 222 C154 300 170 360 176 384 L224 384 C230 360 246 300 254 222 C262 214 272 214 280 222 C288 214 296 214 304 220 C314 200 316 180 330 150 C310 160 280 170 250 160 Z"/>
+  <circle cx="200" cy="130" r="17"/>
+  <path d="M182 146 L172 112 L196 140 Z M218 146 L228 112 L204 140 Z"/>
+  <path d="M184 118 C190 108 210 108 216 118 L200 124 Z"/>
+  <path d="M0 400 V330 H22 V316 H38 V330 H62 V316 H78 V330 H100 V316 H116 V330 H284 V316 H300 V330 H322 V316 H338 V330 H360 V316 H376 V330 H400 V400 Z"/>
+  <path d="M10 330 V250 L36 210 L62 250 V330 Z M338 330 V240 L366 196 L394 240 V330 Z"/>
+ </g>
+ <circle cx="194" cy="130" r="2" fill="#ff3b2f"/><circle cx="206" cy="130" r="2" fill="#ff3b2f"/>
+ <rect x="30" y="270" width="12" height="20" rx="6" fill="#f6c768"/><rect x="360" y="262" width="12" height="20" rx="6" fill="#f6c768"/>`),
+
+/* 28 The road up the hill */
+u => frame(u,'#0a0716','#55305e', `
+ ${stars(28,40,170)}
+ ${moon(u,88,86,46,'#f6ecd8')}
+ <path d="M0 262 Q120 200 200 190 Q290 196 400 252 V400 H0 Z" fill="#120a1c"/>
+ <g fill="${INK}">
+  <path d="M168 194 V150 H238 V194 Z M160 154 L203 122 L246 154 Z M214 152 V104 H236 V152 Z M210 108 L225 76 L240 108 Z M178 134 V118 H188 V140 Z"/>
+ </g>
+ <g fill="#ffcf6a"><rect x="176" y="164" width="8" height="12"/><rect x="196" y="164" width="8" height="12"/><rect x="222" y="118" width="7" height="10"/><rect x="218" y="166" width="8" height="12"/></g>
+ <path d="M150 400 C190 350 300 340 260 300 C230 270 170 270 190 230 C196 214 200 204 202 194 L210 194 C210 210 206 226 202 236 C188 268 250 268 276 300 C316 346 220 360 250 400 Z" fill="#2a1d36"/>
+ <path d="M60 400 L70 300 L54 270 M70 310 L94 288 M340 400 L330 290 L350 262 M332 310 L306 296" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/>
+ <g stroke="${INK}" stroke-width="4"><path d="M120 300 V330 M140 296 V326 M160 290 V320 M110 314 H170"/></g>
+ <circle class="flk" cx="246" cy="320" r="26" fill="#ffc94a" opacity=".45" filter="url(#${u}c)"/>
+ <g fill="${INK}"><path d="M226 352 C226 330 230 318 236 312 C238 304 246 304 248 312 C252 318 254 330 254 352 Z"/><circle cx="242" cy="304" r="6"/></g>
+ <circle cx="252" cy="326" r="4" fill="#ffe08a"/>
+ <ellipse cx="200" cy="390" rx="240" ry="30" fill="#c9bde0" opacity=".14" filter="url(#${u}b)"/>`),
+
+/* 29 The gathering */
+u => { const sk='#efe6d2'; const L=(p,w)=>`<polyline points="${p}" fill="none" stroke="${sk}" stroke-width="${w||4.5}" stroke-linecap="round" stroke-linejoin="round"/>`;
+ return frame(u,'#100508','#d9541a', `
+ ${stars(29,24,120)}
+ ${bat(60,110,.45,-8)}${bat(340,96,.5,8)}${bat(300,140,.3,0)}
+ <text x="200" y="66" text-anchor="middle" font-family="'IM Fell English', Georgia, serif" font-style="italic" font-size="40" fill="#ffe3b5">See you tonight</text>
+ <path d="M0 262 Q200 226 400 262 V400 H0 Z" fill="#2a0c0c"/>
+ <g fill="${INK}"><path d="M150 250 V196 H254 V250 Z M140 200 L202 156 L264 200 Z M230 198 V140 H252 V198 Z M226 144 L241 112 L256 144 Z"/></g>
+ <g fill="#ffcf6a"><rect x="164" y="214" width="12" height="16"/><rect x="190" y="214" width="12" height="16"/><rect x="226" y="214" width="12" height="16"/><rect x="236" y="154" width="10" height="14"/><rect x="194" y="176" width="10" height="12" rx="5"/></g>
+ <circle class="flk" cx="200" cy="330" r="90" fill="#ff8a2a" opacity=".45" filter="url(#${u}b)"/>
+ <path d="M0 362 Q200 344 400 364 V400 H0 Z" fill="${INK}"/>
+ <path class="flk" d="M160 360 C150 330 172 320 168 290 C184 306 186 318 194 312 C190 290 198 270 206 250 C214 276 222 292 216 312 C228 304 230 292 236 282 C248 306 250 336 240 360 Z" fill="#ff7a1a"/>
+ <path class="flk" d="M176 360 C172 342 184 332 186 318 C196 330 200 326 204 306 C214 326 222 336 220 346 C228 340 230 334 232 328 C238 344 236 354 230 360 Z" fill="#ffd34a"/>
+ <circle cx="88" cy="262" r="11" fill="${sk}"/><circle cx="84" cy="261" r="2.5" fill="${INK}"/><circle cx="92" cy="261" r="2.5" fill="${INK}"/>
+ ${L('88,274 90,318')}${L('80,284 98,284',3)}${L('80,292 98,292',3)}${L('82,300 97,300',3)}
+ ${L('88,280 70,262 64,240')}${L('90,280 112,292 126,280')}${L('86,320 76,340 80,362')}${L('94,320 110,336 124,330')}
+ <g transform="translate(146 206) scale(.42) rotate(-10)"><path d="${GHOST}" fill="#f2f6f8" opacity=".92"/><ellipse cx="-14" cy="48" rx="7" ry="11" fill="${INK}"/><ellipse cx="14" cy="48" rx="7" ry="11" fill="${INK}"/><ellipse cx="0" cy="80" rx="8" ry="11" fill="${INK}"/></g>
+ <g fill="${INK}"><path d="M300 272 L274 362 L326 362 Z"/><circle cx="300" cy="260" r="9"/><path d="M284 254 L318 249 L318 253 L285 258 Z M292 251 L311 248 L310 220 L324 210 L304 216 Z"/></g>
+ <path d="M298 278 L282 254 M302 278 L320 258" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
+ <path d="M350 290 V326 M350 326 L340 362 M350 326 L364 348 L374 360 M350 298 L332 284 M350 298 L370 286 L378 270" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+ <circle cx="350" cy="276" r="15" fill="#ee7a20" stroke="#a8430b" stroke-width="2"/><path d="M350 261 L352 254" stroke="#3f4a1e" stroke-width="3"/>
+ <path d="M343 272 L347 272 L345 268 Z M353 272 L357 272 L355 268 Z M343 280 Q350 286 357 280 Z" fill="#ffe08a"/>`); }
+];
+
+
+const FIRST = 5, LAST = 29, MONTH = 9, TOTAL = LAST - FIRST + 1;
+const DATA = (function(s){ return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)))); })('W3sidCI6ICJUaGUgY2F0IG9uIHRoZSB3YWxsIiwgImMiOiAiTm9ib2R5IG9uIHRoZSBzdHJlZXQgb3ducyBhIGJsYWNrIGNhdC4gSXQgc2l0cyB0aGVyZSBhbnl3YXksIGV2ZXJ5IG5pZ2h0LCBmYWNpbmcgeW91ciB3aW5kb3cuIn0sIHsidCI6ICJOaWdodCBmbGlnaHQiLCAiYyI6ICJUaGV5IGxlYXZlIHRoZSBiZWxmcnkgYXQgZHVzayBhbmQgY29tZSBiYWNrIHdpdGggb25lIG1vcmUgdGhhbiB0aGV5IGxlZnQgd2l0aC4ifSwgeyJ0IjogIlRoZSBicm9vbSByaWRlciIsICJjIjogIlNlZW4gY3Jvc3NpbmcgdGhlIG1vb24gYXQgMjM6MTQsIGhlYWRpbmcgZWFzdCBhdCBjb25zaWRlcmFibGUgc3BlZWQuIn0sIHsidCI6ICJTb21ldGhpbmcgaW4gdGhlIGhhbGx3YXkiLCAiYyI6ICJUaGUgY29ycmlkb3IgbGlnaHRzIHN3aXRjaCBvbiBieSB0aGVtc2VsdmVzIGFmdGVyIGV2ZXJ5b25lIGhhcyBnb25lIGhvbWUuIE5vdyB5b3Uga25vdyB3aHkuIn0sIHsidCI6ICJOZXZlcm1vcmUiLCAiYyI6ICJJdCBrbm93cyBleGFjdGx5IG9uZSB3b3JkLCBhbmQgaXQgaXMgbm90IGhlbGxvLiJ9LCB7InQiOiAiVGhlIHNwaW5uZXIiLCAiYyI6ICJFaWdodCBsZWdzLCBlaWdodCBleWVzIGFuZCBhbGwgdGhlIHBhdGllbmNlIGluIHRoZSB3b3JsZC4ifSwgeyJ0IjogIkZpcnN0IGxpZ2h0IiwgImMiOiAiVGhlIGZpcnN0IGxhbnRlcm4gb2YgdGhlIHNlYXNvbi4gTm9ib2R5IGNhcnZlZCBpdHMgZ3JpbiBxdWl0ZSB0aGF0IHdpZGUuIn0sIHsidCI6ICJXaG8gd2F0Y2hlcyIsICJjIjogIkl0IG5ldmVyIGJsaW5rcyB3aGlsZSB5b3UgYXJlIGxvb2tpbmcuIn0sIHsidCI6ICJSZXN0bGVzcyIsICJjIjogIlNvbWUgZ3Vlc3RzIGxpa2UgdG8gYXJyaXZlIGVhcmx5LiJ9LCB7InQiOiAiVGhlIGxhc3QgY2FuZGxlIiwgImMiOiAiV2hlbiB0aGUgdGhpcmQgZmxhbWUgZ29lcyBvdXQsIGRvIG5vdCBiZSB0aGUgb25lIGxlZnQgaW4gdGhlIHJvb20uIn0sIHsidCI6ICJEb3VibGUsIGRvdWJsZSIsICJjIjogIlNpbW1lcmluZyBzaW5jZSBsdW5jaHRpbWUuIERvIG5vdCBhc2sgd2hhdCBpcyBpbiBpdCwgYW5kIGRvIG5vdCBhc2sgZm9yIHRoZSByZWNpcGUuIn0sIHsidCI6ICJUaGUgb2xkIG9hayIsICJjIjogIk9sZGVyIHRoYW4gdGhlIGhvdXNlLiBJdCByZW1lbWJlcnMgZXZlcnlvbmUgd2hvIGV2ZXIgY2FydmVkIHRoZWlyIGluaXRpYWxzIGludG8gaXQuIn0sIHsidCI6ICJEbyBub3Qgb3BlbiIsICJjIjogIlRoZSBsaWQgd2FzIG5haWxlZCBzaHV0LiBJdCB3YXMuIn0sIHsidCI6ICJUaGUgaG93bCIsICJjIjogIkhlYXJkIGZyb20gdGhlIHJpZGdlIGV2ZXJ5IG5pZ2h0IHRoaXMgd2VlaywgYSBsaXR0bGUgY2xvc2VyIGVhY2ggdGltZS4ifSwgeyJ0IjogIldlIHNlZSB5b3UiLCAiYyI6ICJUaGUgd29vZHMgYXJlIHF1aWV0IHRvbmlnaHQuIFF1aWV0LCBhbmQgZnVsbCBvZiBleWVzLiJ9LCB7InQiOiAiVGhlIGFwb3RoZWNhcnkiLCAiYyI6ICJFdmVyeSBib3R0bGUgaXMgbGFiZWxsZWQuIE5vbmUgb2YgdGhlIGxhYmVscyBhcmUgaW4gYSBsYW5ndWFnZSBhbnlvbmUgY2FuIHJlYWQuIn0sIHsidCI6ICJXaWxsLW8nLXRoZS13aXNwIiwgImMiOiAiRm9sbG93IHRoZSBsaWdodHMgYWNyb3NzIHRoZSBtYXJzaC4gVGhleSBrbm93IGEgc2hvcnRjdXQuIn0sIHsidCI6ICJUaGUgZmFpcnkgcmluZyIsICJjIjogIlN0ZXAgaW5zaWRlIHRoZSBjaXJjbGUgZm9yIG9uZSBkYW5jZS4gWW91IHdpbGwgYmUgYmFjayBpbiBhIGh1bmRyZWQgeWVhcnMuIn0sIHsidCI6ICJLZWVwZXIgb2YgdGhlIGZpZWxkIiwgImMiOiAiVGhlIGNyb3dzIGFyZSBub3QgYWZyYWlkIG9mIGhpbS4gVGhleSBhcmUgd2FpdGluZyB3aXRoIGhpbS4ifSwgeyJ0IjogIlRoZSBrZXlob2xlIiwgImMiOiAiWW91IHdlcmUgbG9va2luZyBpbi4gU29tZXRoaW5nIHdhcyBhbHJlYWR5IGxvb2tpbmcgb3V0LiJ9LCB7InQiOiAiVGhlIHNlZXIiLCAiYyI6ICJTaGUgc2VlcyB5b3VyIGZ1dHVyZSBjbGVhcmx5LiBTaGUgd291bGQgcmF0aGVyIG5vdCBzYXkuIn0sIHsidCI6ICJUaGUgcG9ydHJhaXQiLCAiYyI6ICJUaGUgZXllcyBmb2xsb3cgeW91IGFyb3VuZCB0aGUgcm9vbS4gTGF0ZWx5LCBzbyBkbyB0aGUgZm9vdHN0ZXBzLiJ9LCB7InQiOiAiVGhlIG5pZ2h0IHZpc2l0b3IiLCAiYyI6ICJIZSBjYW5ub3QgY29tZSBpbiB1bmxlc3MgaW52aXRlZC4gQ2hlY2sgd2hhdCB5b3Ugc2lnbmVkLiJ9LCB7InQiOiAiVGhlIHJvYWQgdXAgdGhlIGhpbGwiLCAiYyI6ICJBbG1vc3QgdGhlcmUuIFRoZSBsaWdodHMgYXJlIG9uIGFuZCB0aGUgZG9vciBpcyB1bmxvY2tlZC4ifSwgeyJ0IjogIlRoZSBnYXRoZXJpbmciLCAiYyI6ICJUb25pZ2h0IHRoZSB3aG9sZSBoaWxsIGNvbWVzIG91dCB0byBjZWxlYnJhdGUuIENvc3R1bWVzIGVuY291cmFnZWQsIHNjcmVhbWluZyBvcHRpb25hbC4ifV0=');
+
+/* where each day sits in the scene (1600 x 1000 units) */
+const POS = {
+  H_round:{x:770,y:262,w:60,h:60,k:'win',s:'round'}, H_tower:{x:774,y:350,w:52,h:76,k:'win',s:'arch'},
+  H_u1:{x:618,y:452,w:46,h:70,k:'win',s:'arch'}, H_u2:{x:676,y:452,w:46,h:70,k:'win',s:'arch'},
+  H_u3:{x:878,y:452,w:46,h:70,k:'win',s:'arch'}, H_u4:{x:936,y:452,w:46,h:70,k:'win',s:'arch'},
+  H_l1:{x:618,y:565,w:46,h:70,k:'win',s:'rect'}, H_l2:{x:936,y:565,w:46,h:70,k:'win',s:'rect'},
+  H_wing:{x:516,y:572,w:48,h:72,k:'win',s:'arch'}, H_rt1:{x:1027,y:430,w:48,h:70,k:'win',s:'arch'},
+  H_rt2:{x:1027,y:572,w:48,h:70,k:'win',s:'rect'}, H_door:{x:768,y:616,w:64,h:106,k:'door',s:'arch'},
+  G1:{x:1180,y:690,w:74,h:96,k:'tomb',s:'round'}, G2:{x:1300,y:674,w:70,h:102,k:'tomb',s:'gothic'},
+  G3:{x:1420,y:688,w:74,h:96,k:'tomb',s:'round'}, G4:{x:1132,y:818,w:94,h:120,k:'tomb',s:'square'},
+  G5:{x:1262,y:834,w:98,h:116,k:'tomb',s:'round'}, G6:{x:1392,y:818,w:92,h:124,k:'tomb',s:'gothic'},
+  G7:{x:1502,y:842,w:84,h:110,k:'tomb',s:'round'},
+  P1:{x:40,y:806,w:104,h:80,k:'pumpkin'}, P2:{x:336,y:790,w:98,h:76,k:'pumpkin'}, P3:{x:150,y:884,w:124,h:94,k:'pumpkin'},
+  P4:{x:318,y:892,w:120,h:90,k:'pumpkin'}, P5:{x:458,y:846,w:104,h:80,k:'pumpkin'}, P6:{x:24,y:910,w:108,h:82,k:'pumpkin'}
+};
+const LAYOUT = {5:'P2',6:'G5',7:'H_rt1',8:'H_u1',9:'G2',10:'H_u4',11:'P4',12:'H_l2',13:'G4',14:'H_u2',15:'P5',16:'G7',17:'G1',
+  18:'G6',19:'P1',20:'H_u3',21:'G3',22:'P3',23:'P6',24:'H_l1',25:'H_round',26:'H_wing',27:'H_tower',28:'H_rt2',29:'H_door'};
+
+const PUMPKIN = `<svg viewBox="0 0 120 92" preserveAspectRatio="none" aria-hidden="true"><g stroke="#8a3a0c" stroke-width="2"><ellipse cx="30" cy="54" rx="26" ry="34" fill="#c45518"/><ellipse cx="90" cy="54" rx="26" ry="34" fill="#c45518"/><ellipse cx="44" cy="52" rx="28" ry="38" fill="#d9681e"/><ellipse cx="76" cy="52" rx="28" ry="38" fill="#d9681e"/><ellipse cx="60" cy="51" rx="28" ry="39" fill="#e97a26"/></g><path d="M56 16 C54 8 58 3 66 1 L68 5 C63 7 62 11 63 16 Z" fill="#3f4a1e"/><ellipse cx="50" cy="32" rx="7" ry="13" fill="#fff" opacity=".13"/></svg>`;
+
+function mix(a,b,t){ const pa=a.match(/\w\w/g).map(h=>parseInt(h,16)), pb=b.match(/\w\w/g).map(h=>parseInt(h,16)); return pa.map((v,i)=>Math.round(v+(pb[i]-v)*t).toString(16).padStart(2,'0')).join(''); }
+
+/* ===== The scene. p runs from 0 (5 Oct) to 1 (29 Oct): the moon rises, the sky reddens, bats, ghosts and fog gather. ===== */
+function buildScene(p){
+  const L=(a,b)=>a+(b-a)*p, r=rng(1031), rb=rng(77);
+  const mx=L(1352,1290).toFixed(0), my=L(565,178).toFixed(0), mr=L(50,92), mc=mix('f4ead0','ffcf86',p);
+  const H='#0b0712';
+  let o=`<svg viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs>
+  <linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05030d"/><stop offset=".62" stop-color="#1b0f31"/><stop offset="1" stop-color="#2e1838"/></linearGradient>
+  <linearGradient id="sk2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a020c"/><stop offset=".55" stop-color="#3a1029"/><stop offset="1" stop-color="#8a3418"/></linearGradient>
+  <radialGradient id="mg"><stop offset="0" stop-color="#${mc}" stop-opacity=".5"/><stop offset="1" stop-color="#${mc}" stop-opacity="0"/></radialGradient>
+  <linearGradient id="gp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d1015"/><stop offset="1" stop-color="#0c0709"/></linearGradient>
+  <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#131c19"/><stop offset="1" stop-color="#080c0b"/></linearGradient>
+  <linearGradient id="gh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#160e1f"/><stop offset="1" stop-color="#0a0710"/></linearGradient>
+  <filter id="fb" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="24"/></filter>
+  <filter id="fm" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sk)"/><rect width="1600" height="1000" fill="url(#sk2)" opacity="${(p*.85).toFixed(2)}"/>`;
+  for(let i=0;i<150;i++){ const x=r()*1600, y=r()*640, rad=.6+r()*1.6, tw=r()<.35, dl=(r()*4).toFixed(1), op=(.3+r()*.6).toFixed(2);
+    o+=`<circle ${tw?`class="tw" style="animation-delay:-${dl}s" `:''}cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${rad.toFixed(1)}" fill="#fff" opacity="${op}"/>`; }
+  o+=`<circle cx="${mx}" cy="${my}" r="${(mr*3.4).toFixed(0)}" fill="url(#mg)"/><circle cx="${mx}" cy="${my}" r="${mr.toFixed(1)}" fill="#${mc}"/>
+  <circle cx="${(mx-mr*.3).toFixed(0)}" cy="${(my-mr*.2).toFixed(0)}" r="${(mr*.18).toFixed(1)}" fill="#000" opacity=".06"/><circle cx="${(+mx+mr*.3).toFixed(0)}" cy="${(+my+mr*.28).toFixed(0)}" r="${(mr*.24).toFixed(1)}" fill="#000" opacity=".05"/><circle cx="${(+mx+mr*.1).toFixed(0)}" cy="${(my-mr*.45).toFixed(0)}" r="${(mr*.1).toFixed(1)}" fill="#000" opacity=".05"/>
+  <g class="cloud" style="animation-duration:90s"><ellipse cx="1150" cy="330" rx="260" ry="12" fill="#2a1c3c" opacity=".55" filter="url(#fm)"/><ellipse cx="1260" cy="346" rx="160" ry="8" fill="#2a1c3c" opacity=".45" filter="url(#fm)"/></g>
+  <g class="cloud" style="animation-duration:130s;animation-delay:-40s"><ellipse cx="420" cy="210" rx="300" ry="10" fill="#2a1c3c" opacity=".45" filter="url(#fm)"/></g>
+  <path d="M0 720 V650 Q120 610 260 636 T520 618 Q700 598 860 646 T1200 626 Q1400 606 1600 646 V720 Z" fill="#170d25"/>`;
+  let pines=''; for(let x=-10;x<1620;x+=26+r()*30){ if(x>460&&x<1140) continue; const h=40+r()*60, b=690+r()*20; pines+=`M${x.toFixed(0)} ${b.toFixed(0)} L${(x+12).toFixed(0)} ${(b-h).toFixed(0)} L${(x+24).toFixed(0)} ${b.toFixed(0)} Z `; }
+  o+=`<path d="${pines}" fill="#120a1d"/>`;
+  const nb=2+Math.round(p*10);
+  for(let i=0;i<nb;i++){ const y=(90+rb()*420).toFixed(0), s=(.35+rb()*.4).toFixed(2), d=(20+rb()*22).toFixed(1), dl=(rb()*40).toFixed(1), bd=(rb()*3).toFixed(1), fd=rb().toFixed(2);
+    o+=`<g class="batfly" style="animation-duration:${d}s;animation-delay:-${dl}s${i%2?';animation-direction:reverse':''}"><g transform="translate(0 ${y})"><g class="bob" style="animation-delay:-${bd}s"><g transform="scale(${s})"><path class="flap" style="animation-delay:-${fd}s" d="${BAT}" fill="#07040c"/></g></g></g></g>`; }
+  // grounds
+  o+=`<path d="M0 1000 V806 Q140 778 300 790 T600 806 V1000 Z" fill="url(#gp)"/>
+  <path d="M1080 1000 V790 Q1300 742 1600 760 V1000 Z" fill="url(#gg)"/>
+  <path d="M380 1000 V782 Q520 714 800 718 Q1060 714 1210 776 V1000 Z" fill="url(#gh)"/>
+  <path d="M0 846 Q160 830 330 846 T600 850 M0 896 Q180 880 360 896 T620 902 M0 950 Q200 934 400 950 T640 956" stroke="#271720" stroke-width="3" fill="none"/>`;
+  // dead tree and crypt behind the graves
+  o+=`<path d="M1500 772 V640 L1556 598 L1612 640 V772 Z" fill="#0e1513"/><path d="M1508 640 H1604 M1520 650 V772 M1592 650 V772" stroke="#1d2a26" stroke-width="5"/>
+  <path d="M1534 772 V694 Q1556 672 1578 694 V772 Z" fill="#040706"/><path d="M1556 598 V566 M1544 580 H1568" stroke="#0e1513" stroke-width="7"/>
+  <path d="M1268 784 C1272 700 1262 640 1268 580 L1256 520" stroke="${H}" stroke-width="15" fill="none" stroke-linecap="round"/>
+  <path d="M1268 604 L1218 546 L1184 534 M1246 566 L1232 504 M1268 590 L1322 524 L1352 474 M1302 546 L1344 544 M1266 646 L1306 616" stroke="${H}" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1184 534 L1164 540 M1232 504 L1236 482 M1352 474 L1350 450 M1352 474 L1374 466 M1344 544 L1364 534 M1256 520 L1262 494" stroke="${H}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  let fence=''; const fy=x=>780-(x-1100)*.05;
+  for(let x=1104;x<1600;x+=20){ const b=fy(x); fence+=`M${x} ${b.toFixed(0)} V${(b-88).toFixed(0)} M${x-4} ${(b-84).toFixed(0)} L${x} ${(b-96).toFixed(0)} L${x+4} ${(b-84).toFixed(0)} `; }
+  o+=`<path d="${fence}" stroke="#080b0a" stroke-width="4" fill="#080b0a"/><path d="M1100 ${fy(1100)-72} L1600 ${fy(1600)-72} M1100 ${fy(1100)-14} L1600 ${fy(1600)-14}" stroke="#080b0a" stroke-width="5"/>`;
+  o+=`<path d="M1104 800 L1110 748 M1092 766 L1124 770 M1376 786 L1372 742 M1360 756 L1388 758" stroke="#1c2522" stroke-width="7" stroke-linecap="round"/>`;
+  // the house
+  o+=`<g fill="${H}"><rect x="640" y="300" width="30" height="100"/><rect x="634" y="292" width="42" height="12"/><rect x="928" y="288" width="28" height="100"/><rect x="922" y="280" width="40" height="12"/>
+  <path d="M584 434 L690 330 L910 330 L1016 434 Z"/><rect x="600" y="426" width="400" height="300"/>
+  <path d="M462 514 L540 396 L618 514 Z"/><rect x="478" y="506" width="124" height="220"/>
+  <rect x="1000" y="384" width="102" height="342"/><path d="M986 394 L1051 236 L1116 394 Z"/>
+  <rect x="738" y="232" width="124" height="494"/><path d="M722 242 L800 96 L878 242 Z"/></g>
+  <g fill="#1a1228"><rect x="592" y="424" width="416" height="9"/><rect x="470" y="504" width="140" height="8"/><rect x="992" y="382" width="118" height="9"/><rect x="730" y="232" width="140" height="10"/></g>`;
+  let sh=''; for(let y=352;y<430;y+=22){ const d=(y-330)*106/104; sh+=`M${(690-d).toFixed(0)} ${y} H${(910+d).toFixed(0)} `; }
+  for(let y=130;y<240;y+=22){ const d=(y-96)*78/146; sh+=`M${(800-d).toFixed(0)} ${y} H${(800+d).toFixed(0)} `; }
+  for(let y=266;y<392;y+=24){ const d=(y-236)*65/158; sh+=`M${(1051-d).toFixed(0)} ${y} H${(1051+d).toFixed(0)} `; }
+  for(let y=422;y<512;y+=22){ const d=(y-396)*78/118; sh+=`M${(540-d).toFixed(0)} ${y} H${(540+d).toFixed(0)} `; }
+  o+=`<path d="${sh}" stroke="#191124" stroke-width="2"/>
+  <path d="M910 330 L1016 434 M800 96 L878 242 M1051 236 L1116 394 M540 396 L618 514 M1102 394 V726 M862 242 V330 M956 290 V330" stroke="#3b2c58" stroke-width="3" opacity=".75" fill="none"/>
+  <path d="M800 96 V58 M1051 236 V204" stroke="${H}" stroke-width="5"/><circle cx="1051" cy="202" r="5" fill="${H}"/>
+  <path transform="translate(800 52) scale(.42)" d="${BAT}" fill="${H}"/>`;
+  Object.values(POS).forEach(q=>{ if(q.k!=='win') return; o+=`<rect x="${q.x-5}" y="${q.y-5}" width="${q.w+10}" height="${q.h+10}" rx="${q.s==='round'?q.w/2+5:4}" fill="#05030a"/>`; if(q.s!=='round') o+=`<rect x="${q.x-8}" y="${q.y+q.h+4}" width="${q.w+16}" height="7" fill="#21182e"/>`; });
+  [[676,565,46,70],[878,565,46,70],[774,470,52,76]].forEach(([x,y,w,h])=>{ o+=`<rect x="${x-5}" y="${y-5}" width="${w+10}" height="${h+10}" rx="4" fill="#05030a"/><rect x="${x-8}" y="${y+h+4}" width="${w+16}" height="7" fill="#21182e"/>
+    <rect x="${x-6}" y="${y+h*.28}" width="${w+12}" height="10" fill="#3a2a20" transform="rotate(-14 ${x+w/2} ${y+h*.3})"/><rect x="${x-6}" y="${y+h*.62}" width="${w+12}" height="10" fill="#33241b" transform="rotate(10 ${x+w/2} ${y+h*.66})"/>`; });
+  o+=`<circle cx="540" cy="462" r="15" fill="#05030a" stroke="#21182e" stroke-width="3"/><path d="M525 462 H555 M540 447 V477" stroke="#21182e" stroke-width="3"/>
+  <path d="M724 614 L876 614 L860 584 L740 584 Z" fill="#150e20"/><rect x="730" y="614" width="8" height="112" fill="#150e20"/><rect x="862" y="614" width="8" height="112" fill="#150e20"/>
+  <path d="M760 728 V612 Q800 588 840 612 V728 Z" fill="#05030a" stroke="#21182e" stroke-width="4"/>
+  <rect x="744" y="724" width="112" height="12" fill="#1c1428"/><rect x="732" y="736" width="136" height="12" fill="#17101f"/><rect x="720" y="748" width="160" height="12" fill="#130d1a"/>
+  <path d="M752 760 C740 820 690 870 676 1000 L904 1000 C886 880 852 820 848 760 Z" fill="#1d1424"/>
+  <g fill="#271c31"><ellipse cx="792" cy="790" rx="26" ry="7"/><ellipse cx="760" cy="840" rx="30" ry="8"/><ellipse cx="800" cy="890" rx="36" ry="9"/><ellipse cx="748" cy="944" rx="40" ry="10"/><ellipse cx="830" cy="976" rx="44" ry="10"/></g>`;
+  // graves: mounds and grass
+  ['G4','G5','G6','G7','G1','G2','G3'].forEach(k=>{ const q=POS[k]; o+=`<ellipse cx="${q.x+q.w/2}" cy="${q.y+q.h+2}" rx="${q.w*.72}" ry="11" fill="#070a09"/>`; });
+  let gr=''; for(let i=0;i<40;i++){ const x=1090+r()*510, y=800+r()*190; gr+=`M${x.toFixed(0)} ${y.toFixed(0)} l-4 -12 M${x.toFixed(0)} ${y.toFixed(0)} l1 -15 M${x.toFixed(0)} ${y.toFixed(0)} l6 -11 `; }
+  o+=`<path d="${gr}" stroke="#1d2a24" stroke-width="2.5" fill="none"/>`;
+  // the pumpkin patch: vines, small pumpkins, scarecrow
+  o+=`<path d="M0 862 C60 842 100 884 150 862 S240 832 300 872 S400 852 470 884 S560 872 600 900 M0 960 C70 940 120 990 190 962 S300 930 360 970 S480 950 560 990" stroke="#1d2a16" stroke-width="5" fill="none"/>`;
+  [[118,858,-20],[214,872,30],[300,858,-30],[420,880,10],[520,900,-10],[80,962,20],[250,966,-20],[480,972,30]].forEach(([x,y,a])=>{ o+=`<ellipse cx="${x}" cy="${y}" rx="18" ry="9" fill="#18240f" transform="rotate(${a} ${x} ${y})"/>`; });
+  [[290,850,20],[560,950,16],[120,990,18]].forEach(([x,y,s])=>{ o+=`<ellipse cx="${x}" cy="${y}" rx="${s}" ry="${s*.72}" fill="#7a3410"/><ellipse cx="${x}" cy="${y}" rx="${s*.45}" ry="${s*.72}" fill="#8a3c12"/><path d="M${x} ${y-s*.7} L${x+2} ${y-s*1.1}" stroke="#2f3a18" stroke-width="3"/>`; });
+  o+=`<g fill="${H}"><rect x="258" y="600" width="9" height="244"/><rect x="186" y="640" width="152" height="8"/>
+  <path d="M236 638 L290 638 L300 736 L288 728 L278 742 L266 730 L256 744 L246 730 L236 740 L228 730 Z"/>
+  <path d="M238 638 L190 642 L184 662 L192 656 L198 668 L204 656 L240 664 Z M288 638 L336 642 L342 662 L334 656 L328 668 L322 656 L286 664 Z"/>
+  <circle cx="263" cy="618" r="20"/><path d="M226 606 C246 598 282 598 302 602 L300 609 C282 604 246 605 228 612 Z M246 602 L250 572 C258 566 272 568 276 574 L282 601 Z"/></g>
+  <path d="M186 650 L176 646 M186 654 L174 658 M338 650 L348 646 M338 654 L350 658" stroke="${H}" stroke-width="2.5"/>
+  <path d="M251 614 L259 614 L255 622 Z M267 614 L275 614 L271 622 Z" fill="#ff9a2a" opacity="${(.2+.8*p).toFixed(2)}"/>`;
+  const crows=[[318,626,false],[206,628,true],[300,627,false],[226,626,true]], nc=1+Math.round(p*3);
+  crows.slice(0,nc).forEach(([x,y,f])=>{ o+=crow(x,y,1.25,f); });
+  // ghosts gather in the graveyard as the month goes on
+  const ng = p<.15 ? 0 : Math.min(5, 1+Math.floor((p-.15)*6)), gp=[[1236,628,.32],[1468,600,.38],[1352,700,.26],[1178,560,.3],[1540,690,.28]];
+  for(let i=0;i<ng;i++){ const [x,y,s]=gp[i]; o+=`<g class="ghostf" style="animation-delay:-${(i*1.7).toFixed(1)}s"><g transform="translate(${x} ${y}) scale(${s})"><path d="${GHOST}" fill="#e6eef5" opacity=".55"/><ellipse cx="-14" cy="48" rx="7" ry="11" fill="#1a1426" opacity=".7"/><ellipse cx="14" cy="48" rx="7" ry="11" fill="#1a1426" opacity=".7"/></g></g>`; }
+  o+=`<g class="fogd" opacity="${(.1+.3*p).toFixed(2)}"><ellipse cx="320" cy="980" rx="440" ry="60" fill="#c9bfe0" filter="url(#fb)"/><ellipse cx="1010" cy="960" rx="460" ry="50" fill="#c9bfe0" filter="url(#fb)"/><ellipse cx="1480" cy="990" rx="380" ry="60" fill="#c9bfe0" filter="url(#fb)"/></g>`;
+  return o+'</svg>';
+}
+/* a thin layer of fog drawn in front of the doors */
+function buildFrontFog(p){
+  let lanterns='';
+  [[726,736],[874,736]].forEach(([x,y])=>{ lanterns+=`<circle class="flk" cx="${x}" cy="${y}" r="30" fill="#ff8a2a" opacity=".35" filter="url(#fl)"/><ellipse cx="${x}" cy="${y}" rx="15" ry="12" fill="#d9681e"/><path d="M${x-8} ${y-2} L${x-3} ${y-2} L${x-5.5} ${y-7} Z M${x+3} ${y-2} L${x+8} ${y-2} L${x+5.5} ${y-7} Z M${x-8} ${y+3} Q${x} ${y+10} ${x+8} ${y+3} Z" fill="#ffd36b"/><path d="M${x} ${y-12} L${x+2} ${y-17}" stroke="#3f4a1e" stroke-width="3"/>`; });
+  return `<svg class="front" viewBox="0 0 1600 1000" aria-hidden="true" focusable="false"><defs><filter id="ff" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="20"/></filter><filter id="fl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter></defs>${lanterns}
+  <g class="fogd" style="animation-duration:58s;animation-delay:-20s" opacity="${(.04+.26*p).toFixed(2)}"><ellipse cx="560" cy="1000" rx="520" ry="46" fill="#d6cdea" filter="url(#ff)"/><ellipse cx="1300" cy="1010" rx="420" ry="44" fill="#d6cdea" filter="url(#ff)"/></g></svg>`;
+}
+
+/* ===== Dates ===== */
+const qs = new URLSearchParams(location.search);
+let now = new Date(), preview = false;
+const qd = qs.get('date');
+if (qd && /^\d{4}-\d{2}-\d{2}$/.test(qd)) { const [y,m,d] = qd.split('-').map(Number); now = new Date(y, m-1, d); preview = true; }
+const Y = now.getFullYear();
+const today0 = new Date(Y, now.getMonth(), now.getDate());
+const start = new Date(Y, MONTH, FIRST), end = new Date(Y, MONTH, LAST);
+let phase, current;
+if (today0 < start) { phase = 'before'; current = FIRST - 1; }
+else if (today0 > end) { phase = 'after'; current = LAST; }
+else { phase = 'during'; current = today0.getDate(); }
+const progress = phase === 'before' ? 0 : (current - FIRST) / (TOTAL - 1);
+const fmt = date => date.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+const fmtDay = d => fmt(new Date(Y, MONTH, d));
+
+/* what this browser has seen before, so missed days can open in a cascade */
+const KEY = 'hollow-hill-seen-' + Y;
+function readSeen(){ try { const v = localStorage.getItem(KEY); return v ? parseInt(v, 10) : null; } catch(e) { return null; } }
+function writeSeen(v){ try { localStorage.setItem(KEY, String(v)); } catch(e) {} }
+let lastSeen = preview ? (qs.has('last') ? parseInt(qs.get('last'), 10) : null) : readSeen();
+if (lastSeen !== null && isNaN(lastSeen)) lastSeen = null;
+
+let cascade = [];
+if (phase === 'during') {
+  if (lastSeen !== null) { for (let d = Math.max(lastSeen + 1, FIRST); d < current; d++) cascade.push(d); }
+  else if (now.getDay() === 1) { for (let d = current - 2; d < current; d++) if (d >= FIRST) cascade.push(d); }
+  cascade.push(current);
+} else if (phase === 'after' && lastSeen !== null && lastSeen < LAST) {
+  for (let d = Math.max(lastSeen + 1, FIRST); d <= LAST; d++) cascade.push(d);
+}
+const autoShow = phase === 'during' && (preview || lastSeen === null || lastSeen < current);
+if (!preview && phase !== 'before') writeSeen(current);
+
+/* ===== Build the page ===== */
+document.getElementById('title').textContent = TITLE;
+document.getElementById('sub').textContent = SUBTITLE;
+const status = document.getElementById('status');
+if (phase === 'before') {
+  const left = Math.round((start - today0) / 864e5);
+  status.textContent = `The first window opens on ${fmtDay(FIRST)}, ${left === 1 ? 'tomorrow' : `in ${left} days`}.`;
+} else if (phase === 'during') {
+  status.textContent = current === LAST ? `${fmt(today0)}. The last window opens today. See you at the party.`
+    : `${fmt(today0)}. ${current - FIRST + 1} of ${TOTAL} windows are open.`;
+} else status.textContent = `All ${TOTAL} windows are open. Happy Halloween.`;
+if (preview) {
+  status.textContent += ' This is a preview. ';
+  const back = document.createElement('a'), u = new URL(location.href);
+  u.searchParams.delete('date'); u.searchParams.delete('last');
+  back.href = u.href; back.textContent = 'Back to today';
+  status.appendChild(back);
+}
+
+/* hold the title for 2 seconds: preview the 29th with every window cascading open */
+if (TEST_GESTURE) {
+  const t = document.getElementById('title'); let hold = null;
+  const stop = () => { clearTimeout(hold); hold = null; t.classList.remove('holding'); };
+  t.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    t.classList.add('holding');
+    hold = setTimeout(() => {
+      const u = new URL(location.href);
+      u.searchParams.set('date', `${Y}-10-${LAST}`); u.searchParams.set('last', String(FIRST - 1));
+      location.href = u.href;
+    }, 2000);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => t.addEventListener(ev, stop));
+  t.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+const scene = document.getElementById('scene');
+scene.insertAdjacentHTML('beforeend', buildScene(progress));
+const doors = {};
+const isDue = d => phase !== 'before' && d <= current;
+for (let d = FIRST; d <= LAST; d++) {
+  const q = POS[LAYOUT[d]], b = document.createElement('button');
+  b.type = 'button';
+  b.className = `door kind-${q.k} shape-${q.s || 'oval'}${q.k === 'pumpkin' && d % 2 ? ' roll-left' : ''}${isDue(d) ? '' : ' locked'}`;
+  b.style.cssText = `left:${q.x/16}%;top:${q.y/10}%;width:${q.w/16}%;height:${q.h/10}%`;
+  const cover = q.k === 'tomb' ? '<span class="slab"></span>' : q.k === 'pumpkin' ? `<span class="pcover">${PUMPKIN}</span>` : '<span class="leaf l"></span><span class="leaf r"></span>';
+  b.innerHTML = `<span class="inside"></span>${cover}<span class="num" aria-hidden="true">${d}</span>`;
+  b.setAttribute('aria-label', isDue(d) ? `${fmtDay(d)}: ${DATA[d-FIRST].t}` : `${fmtDay(d)}: not open yet`);
+  b.addEventListener('click', () => onDoor(d));
+  scene.appendChild(b); doors[d] = b;
+}
+scene.insertAdjacentHTML('beforeend', buildFrontFog(progress));
+
+function openDoor(d, animate){
+  const b = doors[d];
+  if (b.classList.contains('open')) return;
+  b.querySelector('.inside').innerHTML = ILLOS[d-FIRST]('t' + d);
+  if (!animate) { b.classList.add('instant', 'open'); return; }
+  b.classList.add('opening', 'burst');
+  requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add('open')));
+  setTimeout(() => b.classList.remove('opening', 'burst'), 2200);
+}
+for (let d = FIRST; d <= LAST; d++) if (isDue(d) && !cascade.includes(d)) openDoor(d, false);
+
+/* on narrow screens, scroll so today's door is in view */
+const scroller = document.querySelector('.scroller');
+if (phase === 'during' && scroller.scrollWidth > scroller.clientWidth) { const b = doors[current]; scroller.scrollLeft = b.offsetLeft + b.offsetWidth / 2 - scroller.clientWidth / 2; }
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+requestAnimationFrame(() => document.body.classList.add('loaded'));
+const gap = reduce ? 150 : cascade.length > 4 ? Math.max(200, 2600 / cascade.length) : 750;
+setTimeout(() => {
+  cascade.forEach((d, i) => setTimeout(() => openDoor(d, true), i * gap));
+  if (autoShow) setTimeout(() => { if (modal.hidden) showModal(current); }, (cascade.length - 1) * gap + (reduce ? 600 : 2100));
+}, reduce ? 200 : 1100);
+
+/* ===== Close-up view ===== */
+const modal = document.getElementById('modal'), toastEl = document.getElementById('toast');
+const M = id => document.getElementById(id);
+let modalDay = null, lastFocus = null, mc = 0, toastTimer;
+function onDoor(d){
+  if (isDue(d)) { openDoor(d, !doors[d].classList.contains('open')); showModal(d); return; }
+  const b = doors[d]; b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
+  toast(phase === 'before' ? `The calendar starts on ${fmtDay(FIRST)}.` : `This one opens on ${fmtDay(d)}.`);
+}
+function showModal(d){
+  modalDay = d; const i = d - FIRST;
+  M('m-art').innerHTML = ILLOS[i]('m' + (mc++) + '_');
+  M('m-date').textContent = fmtDay(d);
+  M('m-title').textContent = DATA[i].t;
+  M('m-text').textContent = DATA[i].c;
+  M('m-prev').disabled = d <= FIRST;
+  M('m-next').disabled = d >= current;
+  if (modal.hidden) { lastFocus = document.activeElement; modal.hidden = false; requestAnimationFrame(() => modal.classList.add('show')); M('m-close').focus(); }
+}
+function step(dir){ const d = modalDay + dir; if (d < FIRST || d > current) return; openDoor(d, false); showModal(d); }
+function closeModal(){
+  modal.classList.remove('show'); setTimeout(() => { modal.hidden = true; }, 300);
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+M('m-prev').onclick = () => step(-1);
+M('m-next').onclick = () => step(1);
+M('m-close').onclick = closeModal;
+modal.querySelector('[data-close]').onclick = closeModal;
+document.addEventListener('keydown', e => {
+  if (modal.hidden) return;
+  if (e.key === 'Escape') closeModal();
+  else if (e.key === 'ArrowLeft') step(-1);
+  else if (e.key === 'ArrowRight') step(1);
+  else if (e.key === 'Tab') {
+    const f = [...modal.querySelectorAll('button:not(:disabled)')], first = f[0], last = f[f.length-1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600); }
+
+/* if the page is left open overnight, reload when the date changes */
+if (!preview) { const day = now.getDate(); setInterval(() => { if (new Date().getDate() !== day) location.reload(); }, 60000); }
+</script>
+</body>
+</html>
